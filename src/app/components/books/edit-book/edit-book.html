@@ -1,0 +1,89 @@
+<main class="add-book-page">
+  <button class="back-button" type="button" (click)="cancel()">← Back to collection</button>
+  <section class="add-book-form" aria-labelledby="edit-book-title">
+    <p class="eyebrow">COLLECTION EDITION</p>
+    <h1 id="edit-book-title">Edit book</h1>
+    <p class="form-intro">Update this title's details in the Lumen Library collection.</p>
+
+    <form [formGroup]="bookForm" (ngSubmit)="submit()" novalidate>
+      <label class="form-field">
+        Title
+        <input formControlName="title" placeholder="Enter the book title" />
+        @if (bookForm.controls.title.touched && bookForm.controls.title.invalid) {
+          <span class="field-error">Title is required.</span>
+        }
+      </label>
+
+      <label class="form-field">
+        Author
+        <input formControlName="author" placeholder="Enter the author's name" />
+        @if (bookForm.controls.author.touched && bookForm.controls.author.invalid) {
+          <span class="field-error">Author is required.</span>
+        }
+      </label>
+
+      <div class="form-row">
+        <label class="form-field">
+          Category
+          <select formControlName="category">
+            <option value="Fiction">Fiction</option>
+            <option value="Design">Design</option>
+            <option value="Personal growth">Personal growth</option>
+          </select>
+        </label>
+        <label class="form-field">
+          Cover color
+          <select formControlName="accent">
+            <option value="coral">Coral</option>
+            <option value="gold">Gold</option>
+            <option value="blue">Blue</option>
+            <option value="green">Green</option>
+            <option value="plum">Plum</option>
+            <option value="teal">Teal</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="form-field" role="group" aria-labelledby="book-count-label">
+        <span id="book-count-label">Book count</span>
+        <div class="count-stepper">
+          <button
+            type="button"
+            aria-label="Decrease book count"
+            [disabled]="bookForm.controls.bookCount.value <= 1"
+            (click)="decreaseCount()"
+          >
+            −
+          </button>
+          <input
+            formControlName="bookCount"
+            readonly
+            aria-live="polite"
+            aria-label="Number of copies"
+          />
+          <button type="button" aria-label="Increase book count" (click)="increaseCount()">
+            +
+          </button>
+        </div>
+      </div>
+
+      <label class="form-field">
+        ISBN
+        <input formControlName="isbn" placeholder="9780000000000" inputmode="numeric" />
+        @if (bookForm.controls.isbn.touched && bookForm.controls.isbn.invalid) {
+          <span class="field-error">ISBN must be between 10 and 13 characters.</span>
+        }
+      </label>
+
+      <label class="availability-field">
+        <input type="checkbox" formControlName="available" />
+        Available for reservation
+      </label>
+
+      <div class="form-actions">
+        <button class="outline-button" type="button" (click)="cancel()">Cancel</button>
+        <button class="solid-button" type="submit">Save changes</button>
+      </div>
+    </form>
+  </section>
+</main>

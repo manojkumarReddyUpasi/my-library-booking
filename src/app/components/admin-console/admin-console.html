@@ -1,0 +1,46 @@
+<section class="page-heading admin-heading">
+  <div>
+    <p class="eyebrow">LIBRARY OPERATIONS</p>
+    <h1>Admin console</h1>
+    <p>Keep the collection healthy and reservations moving.</p>
+  </div>
+  <button class="solid-button">+ Add a new book</button>
+</section>
+<section class="stats admin-stats">
+  <div><span>Total books</span><strong>1,248</strong><small>↑ 4.6% this month</small></div>
+  <div>
+    <span>Available today</span><strong>972</strong
+    ><small class="positive">↑ 2.1% this month</small>
+  </div>
+  <div>
+    <span>Active reservations</span><strong>276</strong
+    ><small class="warning">12 due this week</small>
+  </div>
+</section>
+<section class="table-panel">
+  <div class="panel-heading">
+    <div>
+      <h2>Inventory overview</h2>
+      <p>Manage books and availability</p>
+    </div>
+    <label class="search-box compact"><span>⌕</span><input placeholder="Search inventory" /></label>
+  </div>
+  <div class="inventory-list">
+    @for (book of books; track book.id) {
+      <div class="inventory-row">
+        <div class="mini-cover" [class]="book.accent"></div>
+        <div class="reservation-book">
+          <strong>{{ book.title }}</strong
+          ><span>{{ book.isbn }} · {{ book.author }}</span>
+        </div>
+        <span class="category-tag">{{ book.category }}</span
+        ><span class="status" [class.returned]="book.available">{{
+          book.available ? 'Available' : 'Checked out'
+        }}</span
+        ><button class="row-action" (click)="toggleAvailability(book)">
+          {{ book.available ? 'Mark out' : 'Mark in' }}
+        </button>
+      </div>
+    }
+  </div>
+</section>

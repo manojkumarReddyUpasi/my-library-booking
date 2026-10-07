@@ -1,0 +1,72 @@
+<div class="shell">
+  <app-side-nav [activeView]="view()" (viewChange)="setView($event)" />
+  <main class="main-content">
+    <app-top-nav [activeView]="view()" />
+    @if (view() === views.Catalog) {
+      <app-books
+        [reservations]="reservations()"
+        (bookReserved)="reserveBook($event)"
+        (toastMessage)="
+          showToast($event.message, $event.type, $event.centered ?? false, $event.book ?? null)
+        "
+      />
+    } @else if (view() === views.Reservations) {
+      <app-reservations
+        [reservations]="reservations()"
+        (reservationUpdated)="updateReservation($event)"
+        (reservationRemoved)="removeReservation($event)"
+      />
+    } @else if (view() === views.Users) {
+      <app-users />
+    } @else {
+      <app-admin-console [books]="adminBooks" (availabilityChange)="toggleAvailability($event)" />
+    }
+  </main>
+</div>
+@if (toast()) {
+  <div
+    class="toast"
+    [class.toast-error]="toastType() === 'error'"
+    [class.toast-centered]="toastCentered()"
+    [class.toast-book]="toastBook()"
+  >
+    @if (toastBook(); as book) {
+      <div class="toast-cover" [class]="'toast-cover ' + book.accent" aria-hidden="true">
+        {{ book.title.charAt(0) }}
+      </div>
+      <div class="toast-book-copy">
+        <p class="toast-kicker">BOOK DETAILS</p>
+        <strong>{{ book.title }}</strong>
+        <span class="toast-author">by {{ book.author }}</span>
+        <div class="toast-chips">
+          <span class="toast-chip">{{ book.category }}</span>
+          <span class="toast-chip">ISBN {{ book.isbn }}</span>
+          <span class="toast-chip">
+            {{ book.bookCount ?? 1 }} {{ (book.bookCount ?? 1) === 1 ? 'copy' : 'copies' }}
+          </span>
+          <span class="toast-chip">{{ reservedUsers(book) }} reserved</span>
+          <span class="toast-chip" [class.toast-chip-off]="!book.available">
+            {{ book.available ? copiesLeft(book) + ' available' : 'Checked out' }}
+          </span>
+        </div>
+        <book-reserve
+          [book]="book"
+          [reservations]="reservations()"
+          [copiesLeft]="copiesLeft(book)"
+          (reserved)="reserveBook(book, $event)"
+        />
+      </div>
+    } @else {
+      <span>{{ toastType() === 'error' ? '!' : '✓' }} {{ toast() }}</span>
+    }
+    <button
+      class="toast-close"
+      type="button"
+      aria-label="Close notification"
+      (click)="closeToast()"
+    >
+      ×
+    </button>
+  </div>
+}
+<router-outlet />

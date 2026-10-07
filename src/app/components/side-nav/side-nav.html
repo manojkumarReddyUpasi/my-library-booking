@@ -1,0 +1,33 @@
+<aside class="sidebar">
+  <div class="brand">
+    <span class="brand-mark">L</span><span>lumen<span class="brand-dot">.</span></span>
+  </div>
+  <div class="profile">
+    <div class="avatar">MC</div>
+    <div><strong>Maya Chen</strong><span>Member since 2024</span></div>
+    <span class="chevron">⌄</span>
+  </div>
+  <nav aria-label="Main navigation">
+    <span class="nav-label">Workspace</span>
+    <button [class.active]="activeView === views.Catalog" (click)="navigate(views.Catalog)">
+      <span class="nav-icon">⌕</span>Discover books
+    </button>
+    <button
+      [class.active]="activeView === views.Reservations"
+      (click)="navigate(views.Reservations)"
+    >
+      <span class="nav-icon">▣</span>My reservations <b>2</b>
+    </button>
+    <button [class.active]="activeView === views.Users" (click)="navigate(views.Users)">
+      <span class="nav-icon">♙</span>Library users
+    </button>
+    <span class="nav-label space-top">Manage</span>
+    <button [class.active]="activeView === views.Admin" (click)="navigate(views.Admin)">
+      <span class="nav-icon">⌘</span>Admin console
+    </button>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="help-icon">?</div>
+    <div><strong>Need a hand?</strong><span>Visit the help center</span></div>
+  </div>
+</aside>

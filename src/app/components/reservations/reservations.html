@@ -1,0 +1,130 @@
+<section class="reservations-page">
+  <div class="reservations-heading">
+    <p class="eyebrow">YOUR READING LIST</p>
+    <h1>My reservations</h1>
+    <p>Keep track of the books making their way to your bedside table.</p>
+  </div>
+  <section class="reservation-stats" aria-label="Reservation summary">
+    <div class="reservation-stat stat-active">
+      <span>Active reservations</span><strong>{{ reservations.length }}</strong
+      ><small>Currently checked out</small>
+    </div>
+    <div class="reservation-stat stat-reading">
+      <span>Books read this year</span><strong>08</strong><small>Across your reading list</small>
+    </div>
+    <div class="reservation-stat stat-return">
+      <span>Next return date</span><strong>26 <small>SEP</small></strong
+      ><small>Keep your reading rhythm</small>
+    </div>
+  </section>
+  <section class="reservation-panel">
+    <div class="reservation-panel-heading">
+      <div>
+        <p class="eyebrow">RECENT ACTIVITY</p>
+        <h2>Reservation history</h2>
+        <p>Your recent borrowing activity</p>
+      </div>
+      <span class="reservation-count">{{ reservations.length }} records</span>
+    </div>
+    <div class="reservation-list">
+      @for (reservation of reservations; track reservation.id) {
+        <div class="reservation-card">
+          <div class="reservation-book-mark"></div>
+          <div class="reservation-book-copy">
+            <strong>{{ reservation.title }}</strong
+            ><span>{{ reservation.id }} · {{ reservation.borrower }}</span>
+          </div>
+          <div class="reservation-date-block">
+            <span>Reserved</span><strong>{{ reservation.issueDate }}</strong>
+          </div>
+          <div class="reservation-date-block">
+            <span>Due date</span><strong>{{ reservation.dueDate }}</strong>
+          </div>
+          <div class="reservation-date-block">
+            <span>Return date</span><strong>{{ reservation.returnDate || '—' }}</strong>
+          </div>
+          <span class="reservation-status" [class.returned]="reservation.status === 'Returned'">
+            <i></i>{{ reservation.status }}
+          </span>
+          @if (reservation.status === 'Active') {
+            <div class="reservation-menu-wrap">
+              <button
+                class="reservation-menu"
+                type="button"
+                aria-label="More options"
+                aria-haspopup="menu"
+                [attr.aria-expanded]="menuId() === reservation.id"
+                (click)="toggleMenu(reservation)"
+              >
+                •••
+              </button>
+              @if (menuId() === reservation.id) {
+                <div class="reservation-dropdown" role="menu">
+                  <button type="button" role="menuitem" (click)="startEdit(reservation)">
+                    Edit
+                  </button>
+                  <button
+                    class="danger"
+                    type="button"
+                    role="menuitem"
+                    (click)="startRemove(reservation)"
+                  >
+                    Remove user
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+        @if (editingId() === reservation.id) {
+          <form class="reservation-edit" (submit)="$event.preventDefault(); save(reservation)">
+            <p class="reservation-edit-title">
+              Edit reservation for <strong>{{ reservation.borrower }}</strong>
+            </p>
+            <label>
+              Due date
+              <input
+                type="date"
+                [value]="dueDate()"
+                [min]="minDate(reservation)"
+                (input)="setDue($event)"
+              />
+            </label>
+            <label>
+              Return date
+              <input
+                type="date"
+                [value]="returnDate()"
+                [min]="minDate(reservation)"
+                (input)="setReturn($event)"
+              />
+            </label>
+            <div class="reservation-edit-actions">
+              @if (confirmingRemove()) {
+                <span>Remove {{ reservation.borrower }} from this reservation?</span>
+                <button class="danger-button" type="button" (click)="remove(reservation)">
+                  Yes, remove
+                </button>
+                <button class="outline-button" type="button" (click)="confirmingRemove.set(false)">
+                  Keep
+                </button>
+              } @else {
+                <button class="danger-button" type="button" (click)="confirmingRemove.set(true)">
+                  Remove user
+                </button>
+                <button class="outline-button" type="button" (click)="editingId.set(null)">
+                  Cancel
+                </button>
+                <button class="solid-button" type="submit" [disabled]="invalid(reservation)">
+                  Save changes
+                </button>
+              }
+            </div>
+          </form>
+        }
+      } @empty {
+        <div class="reservations-empty">You have no reservations yet.</div>
+      }
+    </div>
+  </section>
+</section>

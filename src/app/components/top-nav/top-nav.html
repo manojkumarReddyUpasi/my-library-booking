@@ -1,0 +1,17 @@
+<header class="topbar">
+  <button class="mobile-menu" aria-label="Open menu">☰</button>
+  <div class="breadcrumb">
+    <span>Library</span><span>/</span
+    ><strong>{{
+      activeView === views.Catalog
+        ? 'Discover books'
+        : activeView === views.Reservations
+          ? 'My reservations'
+          : 'Admin console'
+    }}</strong>
+  </div>
+  <div class="top-actions">
+    <button class="icon-button" aria-label="Notifications">♧<i></i></button>
+    <div class="top-avatar">MC</div>
+  </div>
+</header>

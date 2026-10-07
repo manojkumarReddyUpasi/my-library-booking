@@ -1,0 +1,135 @@
+@if (addingBook()) {
+  <app-add-book (bookAdded)="addBook($event)" (canceled)="closeAddBook()" />
+} @else if (editingBook(); as bookToEdit) {
+  <app-edit-book
+    [book]="bookToEdit"
+    (bookUpdated)="updateBook($event)"
+    (canceled)="closeEditBook()"
+  />
+} @else {
+  <section class="hero">
+    <div>
+      <p class="eyebrow">THURSDAY, SEPTEMBER 09, 2026</p>
+      <h1>Find your next<br /><em>good read.</em></h1>
+      <p class="hero-copy">
+        Browse the collection, save a title for later, or reserve something for your next quiet
+        hour.
+      </p>
+    </div>
+    <div class="hero-shape">
+      <span>✦</span><small>YOUR LIBRARY<br />YOUR RHYTHM</small>
+    </div>
+  </section>
+  <section class="catalog-toolbar">
+    <div>
+      <h2>Browse the collection</h2>
+      <p>{{ filteredBooks().length }} titles available to explore</p>
+    </div>
+    <div class="catalog-actions">
+      <label class="search-box"
+        ><span>⌕</span
+        ><input
+          aria-label="Search books"
+          placeholder="Search title, author, or genre"
+          (input)="setSearch($event)"
+      /></label>
+      <button class="solid-button add-book-button" type="button" (click)="openAddBook()">
+        <span aria-hidden="true">+</span> Add a new book
+      </button>
+    </div>
+  </section>
+  <div class="category-row">
+    <button
+      [class.selected]="selectedCategory() === 'All books'"
+      (click)="selectedCategory.set('All books')"
+    >
+      All books</button
+    ><button
+      [class.selected]="selectedCategory() === 'Fiction'"
+      (click)="selectedCategory.set('Fiction')"
+    >
+      Fiction</button
+    ><button
+      [class.selected]="selectedCategory() === 'Design'"
+      (click)="selectedCategory.set('Design')"
+    >
+      Design</button
+    ><button
+      [class.selected]="selectedCategory() === 'Personal growth'"
+      (click)="selectedCategory.set('Personal growth')"
+    >
+      Personal growth
+    </button>
+  </div>
+  <section class="book-grid" aria-label="Book collection">
+    @if (loading()) {
+      <div class="empty-state">Loading books...</div>
+    } @else if (error()) {
+      <div class="empty-state">{{ error() }}</div>
+    } @else {
+      @for (book of filteredBooks(); track book.id) {
+        <article class="book-card" (click)="openBook(book)">
+          <div class="book-cover" [class]="book.accent">
+            <span class="cover-kicker">LUMEN LIBRARY</span><strong>{{ book.title }}</strong
+            ><span class="cover-author">{{ book.author }}</span
+            ><i></i>
+          </div>
+          <div class="book-info">
+            <div>
+              <h3>{{ book.title }}</h3>
+              <p>{{ book.author }}</p>
+              <p class="reserved-count">
+                {{ reservedUsers(book) }}
+                {{ reservedUsers(book) === 1 ? 'user' : 'users' }} reserved
+              </p>
+            </div>
+            <span class="availability" [class.unavailable]="!book.available"
+              ><i></i>{{ book.available ? copiesLeft(book) + ' available' : 'Checked out' }}</span
+            >
+            <button class="edit-book-button" type="button" (click)="openEditBook(book, $event)">
+              Edit
+            </button>
+            <button class="delete-book-button" type="button" (click)="requestDelete(book, $event)">
+              Delete
+            </button>
+          </div>
+        </article>
+      } @empty {
+        <div class="empty-state">No books match your search. Try another title or category.</div>
+      }
+    }
+  </section>
+  @if (pendingDelete(); as bookToDelete) {
+    <div class="delete-dialog-backdrop" (click)="cancelDelete()">
+      <section
+        class="delete-dialog"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="delete-dialog-title"
+        (click)="$event.stopPropagation()"
+      >
+        <button
+          class="delete-dialog-close"
+          type="button"
+          aria-label="Close"
+          (click)="cancelDelete()"
+        >
+          ×
+        </button>
+        <span class="delete-dialog-icon" aria-hidden="true">!</span>
+        <p class="eyebrow">REMOVE FROM COLLECTION</p>
+        <h2 id="delete-dialog-title">Delete this book?</h2>
+        <p class="delete-dialog-copy">
+          Are you sure you want to delete <strong>{{ bookToDelete.title }}</strong
+          >?
+        </p>
+        <div class="delete-dialog-actions">
+          <button class="outline-button" type="button" (click)="cancelDelete()">Cancel</button>
+          <button class="delete-confirm-button" type="button" (click)="confirmDelete()">
+            Delete book
+          </button>
+        </div>
+      </section>
+    </div>
+  }
+}

@@ -1,0 +1,97 @@
+@if (toastMessage(); as message) {
+  <div class="toast" role="status" [class.toast-error]="message.startsWith('Unable')">
+    {{ message }}
+  </div>
+}
+@if (addingUser()) {
+  <add-user
+    [availableRoles]="availableRoles()"
+    (userAdded)="createUser($event)"
+    (canceled)="closeAddUser()"
+  />
+} @else if (editingUser(); as userToEdit) {
+  <edit-user
+    [user]="userToEdit"
+    [availableRoles]="availableRoles()"
+    (userUpdated)="updateUser($event)"
+    (canceled)="closeEditUser()"
+  />
+} @else {
+  <section class="users-page">
+    <div class="users-heading">
+      <p class="eyebrow">LIBRARY COMMUNITY</p>
+      <h1>Library users</h1>
+      <p>Keep track of the people discovering new stories across the library.</p>
+    </div>
+
+    <section class="user-stats" aria-label="User summary">
+      <div class="user-stat user-stat-coral">
+        <span>Total members</span><strong>{{ users().length }}</strong
+        ><small>Growing every month</small>
+      </div>
+      <div class="user-stat user-stat-blue">
+        <span>Active members</span><strong>{{ activeUsers }}</strong
+        ><small>Currently using the library</small>
+      </div>
+      <div class="user-stat user-stat-gold">
+        <span>Open reservations</span><strong>{{ '' }}</strong
+        ><small>Books on bedside tables</small>
+      </div>
+    </section>
+
+    <section class="users-panel">
+      <div class="users-panel-heading">
+        <div>
+          <p class="eyebrow">MEMBER DIRECTORY</p>
+          <h2>All library users</h2>
+          <p>Members and their current reading activity</p>
+        </div>
+        <div class="users-panel-actions">
+          <span class="user-count">{{ users().length }} members</span>
+          <button class="solid-button add-user-button" type="button" (click)="openAddUser()">
+            <span class="add-user-button-icon" aria-hidden="true">+</span>
+            <span>Add user</span>
+          </button>
+        </div>
+      </div>
+      <div class="user-list">
+        @for (user of users(); track user.id) {
+          <article class="user-card">
+            <div class="user-avatar" [class]="user.tone">{{ user.initials }}</div>
+            <div class="user-copy">
+              <strong>{{ user.name }}</strong
+              ><span>{{ user.email }}</span>
+            </div>
+            <div class="user-detail">
+              <span>Member since</span><strong>{{ user.joined }}</strong>
+            </div>
+            <div class="user-detail">
+              <span>Reservations</span><strong>{{ user.reservations }}</strong>
+            </div>
+            <span class="user-status" [class.inactive]="!isActive(user)"
+              ><i></i>{{ isActive(user) ? 'Active' : 'Inactive' }}</span
+            >
+            <div class="user-actions">
+              <button class="user-menu" type="button" aria-label="More options">•••</button>
+              <div class="user-action-box" role="menu">
+                <button type="button" role="menuitem" (click)="openEditUser(user, $event)">
+                  Edit user
+                </button>
+                <button
+                  class="user-delete-action"
+                  type="button"
+                  role="menuitem"
+                  (click)="deleteUser(user, $event)"
+                >
+                  Delete user
+                </button>
+              </div>
+            </div>
+          </article>
+        } @empty {
+          <div class="users-empty">No library users found.</div>
+        }
+      </div>
+    </section>
+  </section>
+}

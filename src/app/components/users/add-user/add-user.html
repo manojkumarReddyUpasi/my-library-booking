@@ -1,0 +1,131 @@
+<main class="edit-user-page">
+  <button class="back-button" type="button" (click)="canceled.emit()">← Back to users</button>
+
+  <section class="edit-user-form" aria-labelledby="add-user-title">
+    <p class="eyebrow">LIBRARY COMMUNITY</p>
+    <h1 id="add-user-title">Add user</h1>
+    <p class="form-intro">Create a library account and choose the roles this member needs.</p>
+
+    <form [formGroup]="userForm" (ngSubmit)="submit()" novalidate>
+      <label class="form-field">
+        Name
+        <input type="text" formControlName="name" placeholder="Enter the user's name" />
+        @if (userForm.controls.name.touched && userForm.controls.name.invalid) {
+          <span class="field-error">Enter a name between 3 and 30 characters.</span>
+        }
+      </label>
+
+      <label class="form-field">
+        Email address
+        <input type="email" formControlName="email" placeholder="name@example.com" />
+        @if (userForm.controls.email.touched && userForm.controls.email.invalid) {
+          <span class="field-error">Enter a valid email address.</span>
+        }
+      </label>
+
+      <label class="form-field">
+        Password
+        <input type="password" formControlName="password" placeholder="Create a password" />
+        @if (userForm.controls.password.touched && userForm.controls.password.invalid) {
+          <span class="field-error">Password is required.</span>
+        }
+      </label>
+
+      <section class="role-picker" aria-labelledby="roles-label">
+        <div class="role-picker-heading">
+          <span id="roles-label">Roles</span>
+          <span class="role-count">{{ selectedRoleIds().length }} selected</span>
+        </div>
+
+        <div class="selected-roles" aria-label="Selected roles">
+          @for (role of selectedRoles; track role.id) {
+            <button
+              class="role-chip"
+              type="button"
+              [attr.aria-label]="'Remove ' + role.name + ' role'"
+              (click)="toggleRole(role.id)"
+            >
+              {{ role.name }} <span aria-hidden="true">×</span>
+            </button>
+          } @empty {
+            <span class="no-roles">No roles selected</span>
+          }
+        </div>
+
+        <div class="role-select">
+          <button
+            class="role-select-trigger"
+            type="button"
+            aria-haspopup="listbox"
+            [attr.aria-expanded]="roleMenuOpen()"
+            (click)="toggleRoleMenu()"
+          >
+            <span>{{ selectedRoleIds().length ? 'Edit selected roles' : 'Choose roles' }}</span>
+            <span class="role-chevron" aria-hidden="true">⌄</span>
+          </button>
+
+          @if (roleMenuOpen()) {
+            <div class="role-menu">
+              <label class="role-search">
+                <span aria-hidden="true">⌕</span>
+                <input
+                  type="search"
+                  aria-label="Search roles"
+                  placeholder="Search roles"
+                  [value]="roleSearch()"
+                  (input)="setRoleSearch($event)"
+                />
+              </label>
+
+              <div class="role-options" aria-label="Available roles">
+                @for (role of filteredRoles; track role.id) {
+                  <label class="role-option">
+                    <input
+                      type="checkbox"
+                      [checked]="isRoleSelected(role.id)"
+                      (change)="toggleRole(role.id, $event)"
+                    />
+                    <span>{{ role.name }}</span>
+                  </label>
+                } @empty {
+                  <p class="role-empty">No matching roles</p>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="account-status" [class.account-status-disabled]="!active()">
+        <div class="account-status-copy">
+          <span class="account-status-label">Account access</span>
+          <strong class="account-status-state">
+            <i aria-hidden="true"></i>{{ active() ? 'Enabled' : 'Disabled' }}
+          </strong>
+          <small>
+            {{
+              active()
+                ? 'This member can use the library.'
+                : 'This member is blocked until the account is enabled.'
+            }}
+          </small>
+        </div>
+        <button
+          class="status-switch"
+          type="button"
+          role="switch"
+          aria-label="Account access"
+          [attr.aria-checked]="active()"
+          (click)="toggleActive()"
+        >
+          <span class="status-switch-thumb"></span>
+        </button>
+      </section>
+
+      <div class="form-actions">
+        <button class="outline-button" type="button" (click)="canceled.emit()">Cancel</button>
+        <button class="solid-button" type="submit">Create user</button>
+      </div>
+    </form>
+  </section>
+</main>

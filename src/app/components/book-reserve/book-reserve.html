@@ -1,0 +1,117 @@
+<span class="label">Reserve for</span>
+
+@if (selectedUsers().length) {
+  <div class="chips" aria-label="Selected users">
+    @for (user of selectedUsers(); track user.id) {
+      <button
+        class="chip"
+        type="button"
+        [attr.aria-label]="'Remove ' + user.name"
+        (click)="toggleUser(user)"
+      >
+        {{ user.name }} <span aria-hidden="true">×</span>
+      </button>
+    }
+  </div>
+}
+
+<div class="select">
+  <button
+    class="trigger"
+    type="button"
+    aria-haspopup="listbox"
+    [attr.aria-expanded]="menuOpen()"
+    [disabled]="copiesLeft === 0"
+    (click)="toggleMenu()"
+  >
+    <span [class.placeholder]="!selectedUsers().length">{{ triggerLabel }}</span>
+    <span aria-hidden="true">⌄</span>
+  </button>
+
+  @if (menuOpen()) {
+    <div class="menu">
+      <label class="search">
+        <span aria-hidden="true">⌕</span>
+        <input
+          type="search"
+          aria-label="Search users"
+          placeholder="Search users"
+          [value]="search()"
+          (input)="setSearch($event)"
+        />
+      </label>
+
+      <div class="list" role="listbox" aria-multiselectable="true" aria-label="Users">
+        @if (loading()) {
+          <p class="empty">Loading users...</p>
+        } @else if (loadError()) {
+          <p class="empty">Unable to load users. Check that the backend is running.</p>
+        } @else {
+          @for (user of filteredUsers(); track user.id) {
+            <button
+              class="option"
+              type="button"
+              role="option"
+              [attr.aria-selected]="isSelected(user)"
+              [class.selected]="isSelected(user)"
+              [disabled]="hasReserved(user)"
+              (click)="toggleUser(user)"
+            >
+              <span class="check" aria-hidden="true">{{ isSelected(user) ? '✓' : '' }}</span>
+              <span class="avatar" aria-hidden="true">{{ user.name.charAt(0).toUpperCase() }}</span>
+              <span class="user">
+                <span class="name">{{ user.name }}</span>
+                <small>{{ user.email }}</small>
+              </span>
+              @if (hasReserved(user)) {
+                <em>Reserved</em>
+              }
+            </button>
+          } @empty {
+            <p class="empty">No users found</p>
+          }
+        }
+      </div>
+    </div>
+  }
+</div>
+
+<div class="dates">
+  <label class="date-field">
+    <span class="label">Issued date</span>
+    <input type="date" [value]="issueDate()" (input)="setDate('issue', $event)" />
+  </label>
+  <label class="date-field">
+    <span class="label">Due date</span>
+    <input type="date" [value]="dueDate()" [min]="issueDate()" (input)="setDate('due', $event)" />
+  </label>
+  <label class="date-field">
+    <span class="label">Return date</span>
+    <input
+      type="date"
+      [value]="returnDate()"
+      [min]="issueDate()"
+      (input)="setDate('return', $event)"
+    />
+  </label>
+</div>
+
+@if (datesInvalid()) {
+  <p class="hint">Due and return dates cannot be before the issued date.</p>
+}
+
+@if (overCapacity) {
+  <p class="hint">
+    Only {{ copiesLeft }} {{ copiesLeft === 1 ? 'copy is' : 'copies are' }} available, but
+    {{ selectedUsers().length }} users are selected.
+  </p>
+}
+
+<button
+  class="reserve-button"
+  type="button"
+  [disabled]="!selectedUsers().length || copiesLeft === 0 || datesInvalid()"
+  (click)="reserve()"
+>
+  {{ reserveLabel }}
+</button>
