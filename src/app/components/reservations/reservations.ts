@@ -25,29 +25,59 @@ function fromIso(value: string): string {
 export class ReservationsComponent {
   @Input() reservations: Reservation[] = [];
   @Output() reservationUpdated = new EventEmitter<Reservation>();
-  @Output() reservationRemoved = new EventEmitter<string>();
 
   protected readonly editingId = signal<string | null>(null);
   protected readonly menuId = signal<string | null>(null);
-  protected readonly confirmingRemove = signal(false);
   protected readonly dueDate = signal('');
   protected readonly returnDate = signal('');
+
+  protected activeCount(): number {
+    return this.reservations.filter((r) => r.status === 'Active').length;
+  }
+
+  // Earliest due date among active reservations; overdue ones count too so they aren't hidden.
+  protected nextReturn(): { day: string; month: string } | null {
+    let next: Date | null = null;
+    for (const r of this.reservations) {
+      const match = r.status === 'Active' ? r.dueDate?.match(/^(\d{2}) (\w{3}) (\d{4})$/) : null;
+      if (!match || !MONTHS.includes(match[2])) continue;
+      const due = new Date(Number(match[3]), MONTHS.indexOf(match[2]), Number(match[1]));
+      if (!next || due < next) next = due;
+    }
+    return next
+      ? { day: String(next.getDate()).padStart(2, '0'), month: MONTHS[next.getMonth()].toUpperCase() }
+      : null;
+  }
+
+  protected reservedThisYear(): number {
+    const year = String(new Date().getFullYear());
+    return this.reservations.filter((r) => r.issueDate.endsWith(year)).length;
+  }
 
   protected toggleMenu(reservation: Reservation) {
     this.menuId.set(this.menuId() === reservation.id ? null : reservation.id);
   }
 
-  protected startRemove(reservation: Reservation) {
-    this.startEdit(reservation);
-    this.confirmingRemove.set(true);
-  }
-
   protected startEdit(reservation: Reservation) {
     this.menuId.set(null);
     this.editingId.set(reservation.id);
-    this.confirmingRemove.set(false);
     this.dueDate.set(toIso(reservation.dueDate));
     this.returnDate.set(toIso(reservation.returnDate));
+  }
+
+  protected markReturned(reservation: Reservation) {
+    const today = new Date();
+    const returnDate = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, '0'),
+      String(today.getDate()).padStart(2, '0'),
+    ].join('-');
+    this.menuId.set(null);
+    this.reservationUpdated.emit({
+      ...reservation,
+      returnDate: fromIso(returnDate),
+      status: 'Returned',
+    });
   }
 
   protected setDue(event: Event) {
@@ -83,8 +113,4 @@ export class ReservationsComponent {
     this.editingId.set(null);
   }
 
-  protected remove(reservation: Reservation) {
-    this.reservationRemoved.emit(reservation.id);
-    this.editingId.set(null);
-  }
 }

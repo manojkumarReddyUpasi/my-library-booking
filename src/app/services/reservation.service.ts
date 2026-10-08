@@ -58,7 +58,7 @@ function toReservation(entity: ReservationEntity): Reservation {
     borrower: entity.user.name,
     issueDate: display(entity.issueDate),
     dueDate: display(entity.dueDate),
-    ...(returned ? { returnDate: display(entity.returnDate) } : {}),
+    ...(entity.returnDate ? { returnDate: display(entity.returnDate) } : {}),
     status: returned ? 'Returned' : 'Active',
   };
 }

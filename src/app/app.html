@@ -14,12 +14,11 @@
       <app-reservations
         [reservations]="reservations()"
         (reservationUpdated)="updateReservation($event)"
-        (reservationRemoved)="removeReservation($event)"
       />
     } @else if (view() === views.Users) {
       <app-users />
     } @else {
-      <app-admin-console [books]="adminBooks" (availabilityChange)="toggleAvailability($event)" />
+      <app-admin-console [reservations]="reservations()" (availabilityChange)="toggleAvailability($event)" />
     }
   </main>
 </div>

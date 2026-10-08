@@ -49,62 +49,6 @@ export class App {
     const body = error.error as { message?: string; error?: string } | null;
     return body?.message || body?.error || fallback;
   }
-  protected readonly adminBooks: Book[] = [
-    {
-      id: 1,
-      title: 'The Night Circus',
-      author: 'Erin Morgenstern',
-      category: 'Fiction',
-      isbn: '9780385534635',
-      available: true,
-      accent: 'coral',
-    },
-    {
-      id: 2,
-      title: 'Tomorrow, and Tomorrow, and Tomorrow',
-      author: 'Gabrielle Zevin',
-      category: 'Fiction',
-      isbn: '9780593321201',
-      available: true,
-      accent: 'gold',
-    },
-    {
-      id: 3,
-      title: 'The Creative Act',
-      author: 'Rick Rubin',
-      category: 'Design',
-      isbn: '9780593652886',
-      available: false,
-      accent: 'blue',
-    },
-    {
-      id: 4,
-      title: 'Atomic Habits',
-      author: 'James Clear',
-      category: 'Personal growth',
-      isbn: '9780735211292',
-      available: true,
-      accent: 'green',
-    },
-    {
-      id: 5,
-      title: 'Pachinko',
-      author: 'Min Jin Lee',
-      category: 'Fiction',
-      isbn: '9781455563937',
-      available: true,
-      accent: 'plum',
-    },
-    {
-      id: 6,
-      title: 'The Design of Everyday Things',
-      author: 'Don Norman',
-      category: 'Design',
-      isbn: '9780465050659',
-      available: true,
-      accent: 'teal',
-    },
-  ];
   protected readonly toast = signal('');
   protected readonly toastType = signal<'success' | 'error'>('success');
   protected readonly toastCentered = signal(false);
@@ -152,19 +96,6 @@ export class App {
       },
       error: (error) =>
         this.showToast(this.apiMessage(error, 'Unable to update this reservation.'), 'error'),
-    });
-  }
-  protected removeReservation(id: string) {
-    const removed = this.reservations().find((item) => item.id === id);
-    this.reservationService.deleteReservation(id).subscribe({
-      next: () => {
-        this.reservations.update((items) => items.filter((item) => item.id !== id));
-        if (removed) {
-          this.showToast(`${removed.borrower} was removed from ${removed.title}.`, 'success');
-        }
-      },
-      error: (error) =>
-        this.showToast(this.apiMessage(error, 'Unable to remove this reservation.'), 'error'),
     });
   }
   protected showToast(

@@ -6,15 +6,20 @@
   </div>
   <section class="reservation-stats" aria-label="Reservation summary">
     <div class="reservation-stat stat-active">
-      <span>Active reservations</span><strong>{{ reservations.length }}</strong
+      <span>Active reservations</span><strong>{{ activeCount() }}</strong
       ><small>Currently checked out</small>
     </div>
     <div class="reservation-stat stat-reading">
-      <span>Books read this year</span><strong>08</strong><small>Across your reading list</small>
+      <span>Books reserved this year</span><strong>{{ reservedThisYear() }}</strong
+      ><small>Across your reading list</small>
     </div>
     <div class="reservation-stat stat-return">
-      <span>Next return date</span><strong>26 <small>SEP</small></strong
-      ><small>Keep your reading rhythm</small>
+      <span>Next return date</span>@if (nextReturn(); as next) {
+        <strong>{{ next.day }} <small>{{ next.month }}</small></strong>
+      } @else {
+        <strong>—</strong>
+      }
+      <small>Keep your reading rhythm</small>
     </div>
   </section>
   <section class="reservation-panel">
@@ -63,13 +68,8 @@
                   <button type="button" role="menuitem" (click)="startEdit(reservation)">
                     Edit
                   </button>
-                  <button
-                    class="danger"
-                    type="button"
-                    role="menuitem"
-                    (click)="startRemove(reservation)"
-                  >
-                    Remove user
+                  <button type="button" role="menuitem" (click)="markReturned(reservation)">
+                    Mark book returned
                   </button>
                 </div>
               }
@@ -100,25 +100,12 @@
               />
             </label>
             <div class="reservation-edit-actions">
-              @if (confirmingRemove()) {
-                <span>Remove {{ reservation.borrower }} from this reservation?</span>
-                <button class="danger-button" type="button" (click)="remove(reservation)">
-                  Yes, remove
-                </button>
-                <button class="outline-button" type="button" (click)="confirmingRemove.set(false)">
-                  Keep
-                </button>
-              } @else {
-                <button class="danger-button" type="button" (click)="confirmingRemove.set(true)">
-                  Remove user
-                </button>
-                <button class="outline-button" type="button" (click)="editingId.set(null)">
-                  Cancel
-                </button>
-                <button class="solid-button" type="submit" [disabled]="invalid(reservation)">
-                  Save changes
-                </button>
-              }
+              <button class="outline-button" type="button" (click)="editingId.set(null)">
+                Cancel
+              </button>
+              <button class="solid-button" type="submit" [disabled]="invalid(reservation)">
+                Save changes
+              </button>
             </div>
           </form>
         }
