@@ -1,7 +1,7 @@
 import { Component, inject, signal, ViewEncapsulation } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { forkJoin } from 'rxjs';
-import { RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { filter, forkJoin } from 'rxjs';
 import { AdminConsoleComponent } from './components/admin-console/admin-console';
 import { BooksComponent } from './components/books/books';
 import { BookReserve, ReserveRequest } from './components/book-reserve/book-reserve';
@@ -13,6 +13,7 @@ import { Book, availableCopies } from './models/book.model';
 import { LibraryView } from './models/library-view.model';
 import { Reservation, countReservedUsers } from './models/reservation.model';
 import { ReservationService } from './services/reservation.service';
+import { AuthService } from './services/auth.service';
 
 @Component({
   selector: 'app-root',
@@ -34,10 +35,19 @@ import { ReservationService } from './services/reservation.service';
 export class App {
   protected readonly views = LibraryView;
   protected readonly view = signal<LibraryView>(LibraryView.Catalog);
+  protected readonly isAuthPage = signal(false);
+  protected readonly authService = inject(AuthService);
   protected readonly reservations = signal<Reservation[]>([]);
   private readonly reservationService = inject(ReservationService);
+  private readonly router = inject(Router);
 
   constructor() {
+    this.router.events
+      .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
+      .subscribe((event) => {
+        const path = event.urlAfterRedirects.split(/[?#]/)[0];
+        this.isAuthPage.set(path === '/login' || path === '/register');
+      });
     this.reservationService.getReservations().subscribe({
       next: (items) => this.reservations.set(items),
       error: (error) =>

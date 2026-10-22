@@ -89,6 +89,44 @@
   color: #9b9c94;
   font-size: 17px;
 }
+.profile-wrap {
+  position: relative;
+}
+.profile-toggle {
+  width: 100%;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid #41423d;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.profile-menu {
+  position: absolute;
+  top: calc(100% - 12px);
+  left: 10px;
+  right: 10px;
+  z-index: 10;
+  background: #3c3d37;
+  border-radius: 8px;
+  padding: 6px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+}
+.profile-menu button {
+  width: 100%;
+  border: 0;
+  background: none;
+  color: #fff;
+  text-align: left;
+  font-size: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.profile-menu button:hover {
+  background: #55564f;
+}
 nav {
   padding-top: 29px;
 }

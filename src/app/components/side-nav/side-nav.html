@@ -1,11 +1,23 @@
 <aside class="sidebar">
-  <div class="brand">
-    <span class="brand-mark">L</span><span>lumen<span class="brand-dot">.</span></span>
-  </div>
-  <div class="profile">
-    <div class="avatar">MC</div>
-    <div><strong>Maya Chen</strong><span>Member since 2024</span></div>
-    <span class="chevron">⌄</span>
+  <div class="profile-wrap">
+    <button
+      type="button"
+      class="profile profile-toggle"
+      aria-haspopup="menu"
+      [attr.aria-expanded]="menuOpen()"
+      (click)="menuOpen.set(!menuOpen())"
+    >
+      <div class="avatar">{{ initials() || '?' }}</div>
+      <div>
+        <strong>{{ user()?.name }}</strong><span>{{ user()?.email }}</span>
+      </div>
+      <span class="chevron">⌄</span>
+    </button>
+    @if (menuOpen()) {
+      <div class="profile-menu" role="menu">
+        <button type="button" role="menuitem" (click)="logout()">Log out</button>
+      </div>
+    }
   </div>
   <nav aria-label="Main navigation">
     <span class="nav-label">Workspace</span>
