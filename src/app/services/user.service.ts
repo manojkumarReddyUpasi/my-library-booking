@@ -6,7 +6,7 @@ import { ActiveUser, LibraryUser } from '../models/user.model';
 @Injectable({ providedIn: 'root' })
 export class UserService {
   private readonly http = inject(HttpClient);
-  private readonly usersUrl = 'http://localhost:8081/api/';
+  private readonly usersUrl = '/backend/api/';
   getUsers(): Observable<LibraryUser[]> {
     return this.http.get<LibraryUser[]>(this.usersUrl + 'users/needAllUsers');
   }

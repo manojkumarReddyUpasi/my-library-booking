@@ -6,7 +6,7 @@ import { UserRole } from '../models/user.role.model';
 @Injectable({ providedIn: 'root' })
 export class RoleService {
   private readonly http = inject(HttpClient);
-  private readonly rolesUrl = 'http://localhost:8081/roles';
+  private readonly rolesUrl = '/backend/roles';
 
   getRoles(): Observable<UserRole[]> {
     return this.http.get<UserRole[]>(this.rolesUrl);

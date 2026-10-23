@@ -1,0 +1,44 @@
+services:
+  database:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: library_booking
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+    ports:
+      - "3307:3306"
+    volumes:
+      - library_booking_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping --host=127.0.0.1 --user=root --password=$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  backend:
+    build:
+      context: ../library booking
+      dockerfile: Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://database:3306/library_booking?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+    ports:
+      - "8081:8081"
+    depends_on:
+      database:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      BACKEND_URL: http://backend:8081
+    ports:
+      - "4200:8080"
+    depends_on:
+      - backend
+
+volumes:
+  library_booking_data:

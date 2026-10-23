@@ -66,7 +66,7 @@ function toReservation(entity: ReservationEntity): Reservation {
 @Injectable({ providedIn: 'root' })
 export class ReservationService {
   private readonly http = inject(HttpClient);
-  private readonly reservationsUrl = 'http://localhost:8081/reservations';
+  private readonly reservationsUrl = '/backend/reservations';
 
   getReservations(): Observable<Reservation[]> {
     return this.http

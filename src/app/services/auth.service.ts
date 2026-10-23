@@ -15,7 +15,7 @@ const SESSION_KEY = 'library_auth_session';
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
-  private readonly authUrl = 'http://localhost:8081/api/auth';
+  private readonly authUrl = '/backend/api/auth';
   private readonly user = signal<CurrentUser | null>(this.readUser());
   private readonly loggedIn = signal(this.user() !== null);
 

@@ -7,7 +7,7 @@ import type { NewBookDetails } from '../components/books/add-book/add-book';
 @Injectable({ providedIn: 'root' })
 export class BooksService {
   private readonly http = inject(HttpClient);
-  private readonly booksUrl = 'http://localhost:8081/books';
+  private readonly booksUrl = '/backend/books';
 
   getBooks(): Observable<Book[]> {
     return this.http.get<Book[]>(this.booksUrl);
