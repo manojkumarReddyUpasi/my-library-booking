@@ -40,6 +40,45 @@ export class AuthService {
     this.loggedIn.set(false);
   }
 
+  getAuthorizationHeader(): string | null {
+    const token = this.readAccessToken();
+    if (!token) return null;
+    return /^Bearer\s/i.test(token) ? token : `Bearer ${token}`;
+  }
+
+  private readAccessToken(): string | null {
+    if (!this.isBrowser) return null;
+    try {
+      const stored: unknown = JSON.parse(localStorage.getItem(SESSION_KEY) ?? 'null');
+      if (!stored || typeof stored !== 'object') return null;
+
+      const session = stored as Record<string, unknown>;
+      const response = session['response'];
+      const data =
+        response && typeof response === 'object'
+          ? (response as Record<string, unknown>)
+          : session;
+      const nestedData = data['data'];
+      const candidates = [
+        data['token'],
+        data['accessToken'],
+        data['access_token'],
+        data['jwt'],
+        ...(nestedData && typeof nestedData === 'object'
+          ? [
+              (nestedData as Record<string, unknown>)['token'],
+              (nestedData as Record<string, unknown>)['accessToken'],
+              (nestedData as Record<string, unknown>)['access_token'],
+              (nestedData as Record<string, unknown>)['jwt'],
+            ]
+          : []),
+      ];
+      return candidates.find((value): value is string => typeof value === 'string' && !!value.trim()) ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   private extractUser(response: unknown, fallbackEmail: string): CurrentUser {
     const body = (response && typeof response === 'object' ? response : {}) as Record<string, unknown>;
     const nested = (body['user'] && typeof body['user'] === 'object' ? body['user'] : {}) as Record<

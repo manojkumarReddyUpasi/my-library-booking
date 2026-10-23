@@ -1,4 +1,4 @@
-import { Component, inject, signal, ViewEncapsulation } from '@angular/core';
+import { Component, effect, inject, signal, ViewEncapsulation } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter, forkJoin } from 'rxjs';
@@ -48,10 +48,13 @@ export class App {
         const path = event.urlAfterRedirects.split(/[?#]/)[0];
         this.isAuthPage.set(path === '/login' || path === '/register');
       });
-    this.reservationService.getReservations().subscribe({
-      next: (items) => this.reservations.set(items),
-      error: (error) =>
-        this.showToast(this.apiMessage(error, 'Unable to load reservations.'), 'error'),
+    effect(() => {
+      if (!this.authService.isLoggedIn()) return;
+      this.reservationService.getReservations().subscribe({
+        next: (items) => this.reservations.set(items),
+        error: (error) =>
+          this.showToast(this.apiMessage(error, 'Unable to load reservations.'), 'error'),
+      });
     });
   }
 
