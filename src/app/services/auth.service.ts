@@ -3,6 +3,8 @@ import { isPlatformBrowser } from '@angular/common';
 import { inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 import { LoginRequest } from '../models/login.model';
+import { RoleService } from './role.service';
+import { UserService } from './user.service';
 
 export interface CurrentUser {
   name: string;
@@ -14,6 +16,8 @@ const SESSION_KEY = 'library_auth_session';
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
+  private readonly roleService = inject(RoleService);
+  private readonly userService = inject(UserService);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly authUrl = '/backend/api/auth';
   private readonly user = signal<CurrentUser | null>(this.readUser());
@@ -25,6 +29,8 @@ export class AuthService {
   login(request: LoginRequest): Observable<unknown> {
     return this.http.post<unknown>(this.authUrl + '/login', request).pipe(
       tap((response) => {
+        this.userService.clearCache();
+        this.roleService.clearCache();
         if (!this.isBrowser) return;
         const user = this.extractUser(response, request.email);
         localStorage.setItem(SESSION_KEY, JSON.stringify({ user, response }));
@@ -35,6 +41,8 @@ export class AuthService {
   }
 
   logout(): void {
+    this.userService.clearCache();
+    this.roleService.clearCache();
     if (this.isBrowser) localStorage.removeItem(SESSION_KEY);
     this.user.set(null);
     this.loggedIn.set(false);

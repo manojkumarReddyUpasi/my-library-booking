@@ -5,25 +5,41 @@
     <main class="main-content">
       <app-top-nav [activeView]="view()" />
       @if (view() === views.Catalog) {
-        <app-books
-          [reservations]="reservations()"
-          (bookReserved)="reserveBook($event)"
-          (toastMessage)="
-            showToast($event.message, $event.type, $event.centered ?? false, $event.book ?? null)
-          "
-        />
+        @defer (on immediate) {
+          <app-books
+            [reservations]="reservations()"
+            (bookReserved)="reserveBook($event)"
+            (toastMessage)="
+              showToast($event.message, $event.type, $event.centered ?? false, $event.book ?? null)
+            "
+          />
+        } @placeholder {
+          <p class="view-loading" role="status">Loading catalog…</p>
+        }
       } @else if (view() === views.Reservations) {
-        <app-reservations
-          [reservations]="reservations()"
-          (reservationUpdated)="updateReservation($event)"
-        />
+        @defer (on immediate) {
+          <app-reservations
+            [reservations]="reservations()"
+            (reservationUpdated)="updateReservation($event)"
+          />
+        } @placeholder {
+          <p class="view-loading" role="status">Loading reservations…</p>
+        }
       } @else if (view() === views.Users) {
-        <app-users />
+        @defer (on immediate) {
+          <app-users />
+        } @placeholder {
+          <p class="view-loading" role="status">Loading users…</p>
+        }
       } @else {
-        <app-admin-console
-          [reservations]="reservations()"
-          (availabilityChange)="toggleAvailability($event)"
-        />
+        @defer (on immediate) {
+          <app-admin-console
+            [reservations]="reservations()"
+            (availabilityChange)="toggleAvailability($event)"
+          />
+        } @placeholder {
+          <p class="view-loading" role="status">Loading dashboard…</p>
+        }
       }
     </main>
   </div>
@@ -53,12 +69,14 @@
               {{ book.available ? copiesLeft(book) + ' available' : 'Checked out' }}
             </span>
           </div>
-          <book-reserve
-            [book]="book"
-            [reservations]="reservations()"
-            [copiesLeft]="copiesLeft(book)"
-            (reserved)="reserveBook(book, $event)"
-          />
+          @defer (on immediate) {
+            <book-reserve
+              [book]="book"
+              [reservations]="reservations()"
+              [copiesLeft]="copiesLeft(book)"
+              (reserved)="reserveBook(book, $event)"
+            />
+          }
         </div>
       } @else {
         <span>{{ toastType() === 'error' ? '!' : '✓' }} {{ toast() }}</span>
