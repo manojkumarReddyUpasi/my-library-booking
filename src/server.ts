@@ -11,6 +11,7 @@ const browserDistFolder = join(import.meta.dirname, '../browser');
 
 const app = express();
 const angularApp = new AngularNodeAppEngine();
+const backendUrl = new URL(process.env['BACKEND_URL'] ?? 'http://localhost:8081');
 
 /**
  * Example Express Rest API endpoints can be defined here.
@@ -27,6 +28,47 @@ const angularApp = new AngularNodeAppEngine();
 /**
  * Serve static files from /browser
  */
+app.use('/backend', async (req, res) => {
+  try {
+    const headers = new Headers();
+    for (const [name, value] of Object.entries(req.headers)) {
+      if (
+        value !== undefined &&
+        !['connection', 'content-length', 'host', 'transfer-encoding'].includes(name)
+      ) {
+        headers.set(name, Array.isArray(value) ? value.join(', ') : value);
+      }
+    }
+
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    const requestBody = chunks.length
+      ? new Blob([new Uint8Array(Buffer.concat(chunks))])
+      : undefined;
+    const requestPath = req.originalUrl.replace(/^\/backend/, '') || '/';
+    const response = await fetch(new URL(requestPath, backendUrl), {
+      method: req.method,
+      headers,
+      body: requestBody,
+      redirect: 'manual',
+    });
+
+    for (const [name, value] of response.headers) {
+      if (!['content-encoding', 'content-length', 'transfer-encoding'].includes(name)) {
+        res.setHeader(name, value);
+      }
+    }
+    res.status(response.status).send(Buffer.from(await response.arrayBuffer()));
+  } catch (error) {
+    console.error('Unable to forward API request to the backend.', error);
+    res
+      .status(502)
+      .json({ message: 'Unable to reach the library API. Check that the backend is running.' });
+  }
+});
+
 app.use(
   express.static(browserDistFolder, {
     maxAge: '1y',
@@ -41,9 +83,7 @@ app.use(
 app.use((req, res, next) => {
   angularApp
     .handle(req)
-    .then((response) =>
-      response ? writeResponseToNodeResponse(response, res) : next(),
-    )
+    .then((response) => (response ? writeResponseToNodeResponse(response, res) : next()))
     .catch(next);
 });
 
