@@ -41,14 +41,38 @@ Spring app separately on port 8081.
 ## Jenkins continuous integration
 
 The `Jenkinsfile` checks out both repositories, builds Angular, runs the Spring
-Boot tests against a temporary MySQL container, and builds both Docker images.
-It does not push images or deploy to AWS yet; those steps need your AWS region,
-Elastic Beanstalk environment names, and Jenkins AWS credentials.
+Boot tests against a temporary MySQL container, builds both Docker images, and
+deploys successful builds from `main` to the Elastic Beanstalk API and web
+environments. Deployment uses the repositories' Dockerfiles as Elastic
+Beanstalk source bundles; it does not push images to a container registry.
 
 Use a Linux Jenkins agent with Git, Node.js 22, Java 17, Docker Engine access,
-and OpenSSL installed. Create a Pipeline job using this Angular repository and
-its `Jenkinsfile`. Install the Jenkins Pipeline and Git plugins. The agent user
-must be allowed to access Docker.
+the AWS CLI v2, and OpenSSL installed. The agent user must be allowed to access
+Docker. Create a Pipeline job using this Angular repository and its
+`Jenkinsfile`; configure its SCM branch as `*/main`. Add a Jenkins username and
+password credential with ID `aws-deploy-credentials`, using the AWS access key
+as the username and secret key as the password. Keep those values in Jenkins
+Credentials, never in the repository or Jenkinsfile. The AWS principal needs
+`elasticbeanstalk:CreateStorageLocation`, `DescribeEnvironments`,
+`CreateApplicationVersion`, and `UpdateEnvironment`, plus `s3:PutObject` and
+`s3:GetObject` for the `library-booking/*` prefix in the regional Elastic
+Beanstalk source bucket. Scope permissions to those environments and objects
+where AWS supports resource-level permissions.
+
+For Jenkins running in a local Ubuntu VM on Windows, configure the job's
+**Poll SCM** trigger (for example, `H/5 * * * *`) so it can discover changes
+from GitHub without requiring GitHub to reach your local machine. Keep the VM
+running for polling and builds to occur. The AWS credential is required because
+a local VM does not inherit an EC2 instance role.
+
+The deploy stage runs only after all preceding stages succeed and only for the
+`main` branch. It updates `library-booking-api` first and
+`library-booking-web` second in `ap-southeast-2`; each deployment must return
+Elastic Beanstalk status `Ready` and health `Green` for the Jenkins build to
+pass. In the Elastic Beanstalk console, the previous application version can
+be selected to roll back a deployment. Confirm that the Jenkins AWS principal
+can upload to the region's Elastic Beanstalk source bucket and that both
+environments use the Docker platform before enabling automatic deployment.
 
 ## AWS Elastic Beanstalk deployment
 
@@ -89,9 +113,9 @@ configuration is not needed for the deployed frontend.
 
 ## Deploying from Jenkins
 
-The included pipeline remains CI-only: it builds and tests the apps and Docker
-images, but does not deploy them. AWS CLI authentication on a developer
-machine does not authenticate a separate Jenkins server. Add a deployment
-stage only after configuring a narrowly scoped Jenkins AWS role or short-lived
-credentials, plus artifact retention and a rollback procedure. Never add AWS
-keys to this repository.
+After configuring Jenkins credentials and polling as described above, use
+**Build Now** once to verify checkout, frontend build, backend tests, and Docker
+image builds before relying on automatic polling. A successful `main` build
+then deploys the API and web source bundles in order. Check the build's
+**Console Output** for each environment's final `Ready` / `Green` status.
+Never add AWS keys or database credentials to this repository.
