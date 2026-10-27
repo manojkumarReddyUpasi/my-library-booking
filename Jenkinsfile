@@ -98,7 +98,7 @@ pipeline {
                     SPRING_DATASOURCE_USERNAME=root \
                     SPRING_DATASOURCE_PASSWORD=ci-root-password \
                     JWT_SECRET="$(openssl rand -base64 32)" \
-                    ./mvnw -B test
+                    sh ./mvnw -B test
                 '''
             }
         }
