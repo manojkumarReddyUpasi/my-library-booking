@@ -119,7 +119,7 @@ pipeline {
             }
             steps {
                 withCredentials([usernamePassword(
-                    credentialsId: 'aws-deploy-credentials',
+                    credentialsId: 'eacef078-cc1c-4734-a1f2-fb4665f0236f',
                     usernameVariable: 'AWS_ACCESS_KEY_ID',
                     passwordVariable: 'AWS_SECRET_ACCESS_KEY'
                 )]) {
