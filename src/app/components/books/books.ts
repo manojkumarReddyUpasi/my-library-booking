@@ -89,6 +89,7 @@ export class BooksComponent {
   protected addBook(details: NewBookDetails) {
     this.booksService
       .insertBook(details)
+
       .pipe(
         catchError((error: HttpErrorResponse) => {
           const apiError = error.error as { message?: string; error?: string } | null;
