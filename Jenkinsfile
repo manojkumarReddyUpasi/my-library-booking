@@ -23,10 +23,40 @@ pipeline {
             }
         }
 
+        stage('Install Node.js') {
+            steps {
+                sh '''
+                    set -eu
+                    NODE_VERSION=22.22.3
+                    NODE_ARCHIVE="node-v${NODE_VERSION}-linux-x64.tar.xz"
+                    NODE_DIR="$WORKSPACE/.ci-tools"
+                    mkdir -p "$NODE_DIR"
+                    curl --fail --location --silent --show-error \
+                      "https://nodejs.org/dist/v${NODE_VERSION}/${NODE_ARCHIVE}" \
+                      --output "$NODE_DIR/$NODE_ARCHIVE"
+                    curl --fail --location --silent --show-error \
+                      "https://nodejs.org/dist/v${NODE_VERSION}/SHASUMS256.txt" \
+                      --output "$NODE_DIR/SHASUMS256.txt"
+                    if ! CHECKSUM_LINE="$(grep -E "  ${NODE_ARCHIVE}$" "$NODE_DIR/SHASUMS256.txt")"; then
+                      echo "Could not find the Node.js archive checksum."
+                      exit 1
+                    fi
+                    printf '%s\\n' "$CHECKSUM_LINE" | (
+                      cd "$NODE_DIR"
+                      sha256sum --check --status
+                    )
+                    tar -xJf "$NODE_DIR/$NODE_ARCHIVE" -C "$NODE_DIR"
+                '''
+            }
+        }
+
         stage('Build frontend') {
             steps {
-                sh 'npm ci'
-                sh 'npm run build'
+                withEnv(["PATH+NODEJS=${env.WORKSPACE}/.ci-tools/node-v22.22.3-linux-x64/bin"]) {
+                    sh 'node --version'
+                    sh 'npm ci'
+                    sh 'npm run build'
+                }
             }
         }
 
