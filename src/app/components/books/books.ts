@@ -81,6 +81,7 @@ export class BooksComponent {
   }
   protected openEditBook(book: Book, event: Event) {
     event.stopPropagation();
+
     this.editingBook.set(book);
   }
   protected closeEditBook() {
