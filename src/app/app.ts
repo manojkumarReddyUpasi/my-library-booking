@@ -55,6 +55,7 @@ export class App {
         error: (error) =>
           this.showToast(this.apiMessage(error, 'Unable to load reservations.'), 'error'),
       });
+      //
     });
   }
 
