@@ -74,6 +74,7 @@ export class BooksComponent {
     });
   }
   protected openAddBook() {
+    //
     this.addingBook.set(true);
   }
   protected closeAddBook() {
