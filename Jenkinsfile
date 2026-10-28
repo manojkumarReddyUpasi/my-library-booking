@@ -4,6 +4,7 @@ pipeline {
     }
 
     options {
+        skipDefaultCheckout(true)
         timestamps()
     }
 
@@ -14,6 +15,14 @@ pipeline {
     }
 
     stages {
+        stage('Checkout frontend') {
+            steps {
+                retry(3) {
+                    checkout scm
+                }
+            }
+        }
+
         stage('Checkout backend') {
             steps {
                 dir('backend') {
