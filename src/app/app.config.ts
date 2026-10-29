@@ -6,6 +6,7 @@ import { provideClientHydration } from '@angular/platform-browser';
 import { authInterceptor } from './interceptors/auth.interceptor';
 
 export const appConfig: ApplicationConfig = {
+  //
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
