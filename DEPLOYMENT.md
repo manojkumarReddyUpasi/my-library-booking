@@ -68,9 +68,10 @@ AWS access key as the username and secret key as the password. The policy in
 [`infra/jenkins-deploy-policy.json`](./infra/jenkins-deploy-policy.json) scopes
 deployment to the two Elastic Beanstalk applications, their application
 versions and environments, their CloudFormation metadata, and the deployment
-artifact prefix. Keep the keys in Jenkins Credentials, never in the
-repository, Jenkinsfile, or build log. Never use root-user access keys for
-Jenkins.
+artifact prefix. It also permits read-only Auto Scaling group discovery needed
+by Elastic Beanstalk deployments. Keep the keys in Jenkins Credentials, never
+in the repository, Jenkinsfile, or build log. Never use root-user access keys
+for Jenkins.
 
 For Jenkins running in a local Ubuntu VM on Windows, SCM polling lets it
 discover GitHub changes without requiring GitHub to reach your local machine.

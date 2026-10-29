@@ -26,7 +26,8 @@
       "Effect": "Allow",
       "Action": [
         "elasticbeanstalk:DescribeEnvironments",
-        "elasticbeanstalk:CreateStorageLocation"
+        "elasticbeanstalk:CreateStorageLocation",
+        "autoscaling:DescribeAutoScalingGroups"
       ],
       "Resource": "*"
     },
