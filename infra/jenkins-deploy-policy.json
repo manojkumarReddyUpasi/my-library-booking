@@ -2,15 +2,21 @@
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "UploadApplicationVersions",
+      "Sid": "CreateApplicationVersions",
       "Effect": "Allow",
-      "Action": [
-        "elasticbeanstalk:CreateApplicationVersion",
-        "elasticbeanstalk:UpdateEnvironment"
-      ],
+      "Action": "elasticbeanstalk:CreateApplicationVersion",
       "Resource": [
         "arn:aws:elasticbeanstalk:ap-southeast-2:730279464171:application/library-booking-api",
         "arn:aws:elasticbeanstalk:ap-southeast-2:730279464171:application/library-booking-web",
+        "arn:aws:elasticbeanstalk:ap-southeast-2:730279464171:applicationversion/library-booking-api/*",
+        "arn:aws:elasticbeanstalk:ap-southeast-2:730279464171:applicationversion/library-booking-web/*"
+      ]
+    },
+    {
+      "Sid": "UpdateApplicationEnvironments",
+      "Effect": "Allow",
+      "Action": "elasticbeanstalk:UpdateEnvironment",
+      "Resource": [
         "arn:aws:elasticbeanstalk:ap-southeast-2:730279464171:environment/library-booking-api/library-booking-api",
         "arn:aws:elasticbeanstalk:ap-southeast-2:730279464171:environment/library-booking-web/library-booking-web"
       ]

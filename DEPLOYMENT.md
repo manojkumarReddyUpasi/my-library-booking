@@ -66,8 +66,9 @@ Configure the Jenkins username/password credential with ID
 `eacef078-cc1c-4734-a1f2-fb4665f0236f`, using the dedicated deployment user's
 AWS access key as the username and secret key as the password. The policy in
 [`infra/jenkins-deploy-policy.json`](./infra/jenkins-deploy-policy.json) scopes
-deployment to the two Elastic Beanstalk applications/environments and their
-artifact prefix. Keep the keys in Jenkins Credentials, never in the
+deployment to the two Elastic Beanstalk applications, their application
+versions and environments, and the deployment artifact prefix. Keep the keys
+in Jenkins Credentials, never in the
 repository, Jenkinsfile, or build log. Never use root-user access keys for
 Jenkins.
 
