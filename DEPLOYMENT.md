@@ -45,8 +45,11 @@ Boot tests against a temporary MySQL container, and builds both Docker images.
 After successful image builds, it runs the images locally on the Jenkins WSL
 worker at `http://localhost:4200`, with the API at `http://localhost:8081`.
 Those containers stay up after the build and are replaced by the next
-successful build. Their MySQL data is kept in a Docker volume. Successful
-builds from `main` also deploy to the Elastic Beanstalk API and web environments.
+successful build. Their MySQL data is kept in a Docker volume. For an existing
+local database container, Jenkins reuses its configured MySQL root password
+and synchronizes the backend environment file to it; it verifies database
+authentication before starting the API. Successful builds from `main` also
+deploy to the Elastic Beanstalk API and web environments.
 AWS deployment uses the repositories' Dockerfiles as Elastic Beanstalk source
 bundles; it does not push images to a container registry.
 

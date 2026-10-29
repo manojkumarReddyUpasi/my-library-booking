@@ -123,6 +123,7 @@ pipeline {
             steps {
                 sh '''
                     set -eu
+                    set +x
                     NETWORK=library-booking-local
                     DB_CONTAINER=library-booking-local-db
                     API_CONTAINER=library-booking-local-api
@@ -134,14 +135,51 @@ pipeline {
                     chmod 700 "$CONFIG_DIR"
                     if [ ! -s "$ENV_FILE" ]; then
                       umask 077
-                      printf 'MYSQL_ROOT_PASSWORD=%s\\nJWT_SECRET=%s\\n' \
-                        "$(openssl rand -hex 32)" "$(openssl rand -base64 48)" > "$ENV_FILE"
+                      DB_PASSWORD="$(openssl rand -hex 32)"
+                      JWT_SECRET="$(openssl rand -base64 48)"
+                      printf 'MYSQL_ROOT_PASSWORD=%s\\nSPRING_DATASOURCE_PASSWORD=%s\\nJWT_SECRET=%s\\n' \
+                        "$DB_PASSWORD" "$DB_PASSWORD" "$JWT_SECRET" > "$ENV_FILE"
+                      unset DB_PASSWORD JWT_SECRET
                     fi
                     chmod 600 "$ENV_FILE"
-
                     if ! docker network inspect "$NETWORK" >/dev/null 2>&1; then
                       docker network create "$NETWORK" >/dev/null
                     fi
+
+                    if docker container inspect "$DB_CONTAINER" >/dev/null 2>&1; then
+                      DB_CONTAINER_ENV="$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$DB_CONTAINER")"
+                      DB_PASSWORD_COUNT="$(printf '%s\\n' "$DB_CONTAINER_ENV" | grep -c '^MYSQL_ROOT_PASSWORD=' || true)"
+                      DB_PASSWORD="$(printf '%s\\n' "$DB_CONTAINER_ENV" | sed -n 's/^MYSQL_ROOT_PASSWORD=//p')"
+                      unset DB_CONTAINER_ENV
+                      if [ "$DB_PASSWORD_COUNT" -ne 1 ] || [ -z "$DB_PASSWORD" ]; then
+                        echo "Could not recover the configured MySQL root password from $DB_CONTAINER."
+                        exit 1
+                      fi
+                      unset DB_PASSWORD_COUNT
+                    else
+                      DB_PASSWORD_COUNT="$(grep -c '^MYSQL_ROOT_PASSWORD=' "$ENV_FILE" || true)"
+                      DB_PASSWORD="$(sed -n 's/^MYSQL_ROOT_PASSWORD=//p' "$ENV_FILE")"
+                      if [ "$DB_PASSWORD_COUNT" -ne 1 ] || [ -z "$DB_PASSWORD" ]; then
+                        echo "Expected exactly one non-empty MYSQL_ROOT_PASSWORD in $ENV_FILE."
+                        exit 1
+                      fi
+                      unset DB_PASSWORD_COUNT
+                    fi
+
+                    FILE_DB_PASSWORD="$(sed -n 's/^MYSQL_ROOT_PASSWORD=//p' "$ENV_FILE")"
+                    SPRING_PASSWORD="$(sed -n 's/^SPRING_DATASOURCE_PASSWORD=//p' "$ENV_FILE")"
+                    SPRING_PASSWORD_COUNT="$(grep -c '^SPRING_DATASOURCE_PASSWORD=' "$ENV_FILE" || true)"
+                    if [ "$DB_PASSWORD" != "$FILE_DB_PASSWORD" ] || \
+                      [ "$DB_PASSWORD" != "$SPRING_PASSWORD" ] || \
+                      [ "$SPRING_PASSWORD_COUNT" -ne 1 ]; then
+                      umask 077
+                      awk '!/^(MYSQL_ROOT_PASSWORD|SPRING_DATASOURCE_PASSWORD)=/' "$ENV_FILE" > "$ENV_FILE.tmp"
+                      printf 'MYSQL_ROOT_PASSWORD=%s\\nSPRING_DATASOURCE_PASSWORD=%s\\n' \
+                        "$DB_PASSWORD" "$DB_PASSWORD" >> "$ENV_FILE.tmp"
+                      mv "$ENV_FILE.tmp" "$ENV_FILE"
+                      chmod 600 "$ENV_FILE"
+                    fi
+                    unset FILE_DB_PASSWORD SPRING_PASSWORD SPRING_PASSWORD_COUNT
 
                     if ! docker container inspect "$DB_CONTAINER" >/dev/null 2>&1; then
                       docker volume create library-booking-local-db-data >/dev/null
@@ -173,16 +211,22 @@ pipeline {
                       echo "Local MySQL did not become ready."
                       exit 1
                     fi
+                    if ! docker exec "$DB_CONTAINER" sh -c \
+                      'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql --host=127.0.0.1 --user=root --batch --skip-column-names --execute="SELECT 1"' \
+                      >/dev/null 2>&1; then
+                      echo "Local MySQL is running, but its configured root password does not authenticate."
+                      exit 1
+                    fi
 
                     for port in 4200 8081; do
                       for container in $(docker ps --quiet --filter "publish=$port"); do
-                        image="$(docker inspect --format '{{.Config.Image}}' "$container")"
-                        case "$port:$image" in
-                          4200:library-booking-frontend:*)
-                            docker rm --force "$container" >/dev/null
+                        name="$(docker inspect --format '{{.Name}}' "$container" | sed 's#^/##')"
+                        case "$port:$name" in
+                          4200:library-booking-local-web|8081:library-booking-local-api)
                             ;;
-                          8081:library-booking-backend:*)
-                            docker rm --force "$container" >/dev/null
+                          *)
+                            echo "Local port $port is already used by Docker container $name."
+                            exit 1
                             ;;
                         esac
                       done
