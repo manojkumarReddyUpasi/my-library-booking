@@ -12,6 +12,8 @@ import { AuthService } from '../../../services/auth.service';
   styleUrl: '../auth.css',
 })
 export class LoginComponent {
+  // Inject dependencies using Angular's inject function
+
   private readonly formBuilder = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
@@ -25,6 +27,7 @@ export class LoginComponent {
   protected submit(): void {
     if (this.loginForm.invalid || this.submitting()) {
       this.loginForm.markAllAsTouched();
+      //
       return;
     }
 
