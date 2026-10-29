@@ -8,6 +8,10 @@ pipeline {
         timestamps()
     }
 
+    triggers {
+        pollSCM('H/5 * * * *')
+    }
+
     environment {
         AWS_REGION = 'ap-southeast-2'
         EB_API_ENVIRONMENT = 'library-booking-api'

@@ -1,8 +1,11 @@
 # Beginner deployment guide
 
 This setup uses Docker, Jenkins, and two AWS Elastic Beanstalk environments:
-one for the Spring Boot API and one for the Angular site. Kubernetes is not
-needed for this first deployment.
+one for the Spring Boot API and one for the Angular site. The AWS resources are
+defined in [`infra/aws-library-booking.yaml`](./infra/aws-library-booking.yaml),
+and the Jenkins deployment permissions are defined in
+[`infra/jenkins-deploy-policy.json`](./infra/jenkins-deploy-policy.json).
+Kubernetes is not needed for this first deployment.
 
 > AWS resources, including RDS and the two Elastic Beanstalk instances, can
 > incur charges. The $1 budget is an alert, not a spending cap.
@@ -56,21 +59,22 @@ bundles; it does not push images to a container registry.
 Use a Linux Jenkins agent with Git, Node.js 22, Java 17, Docker Engine access,
 the AWS CLI v2, and OpenSSL installed. The agent user must be allowed to access
 Docker. Create a Pipeline job using this Angular repository and its
-`Jenkinsfile`; configure its SCM branch as `*/main`. Add a Jenkins username and
-password credential with ID `aws-deploy-credentials`, using the AWS access key
-as the username and secret key as the password. Keep those values in Jenkins
-Credentials, never in the repository or Jenkinsfile. The AWS principal needs
-`elasticbeanstalk:CreateStorageLocation`, `DescribeEnvironments`,
-`CreateApplicationVersion`, and `UpdateEnvironment`, plus `s3:PutObject` and
-`s3:GetObject` for the `library-booking/*` prefix in the regional Elastic
-Beanstalk source bucket. Scope permissions to those environments and objects
-where AWS supports resource-level permissions.
+`Jenkinsfile`; configure its SCM branch as `*/main`. The Jenkinsfile polls SCM
+every five minutes, so no separate Poll SCM trigger needs to be configured in
+the job. Keep the Jenkins controller and agent online for polling and builds.
+Configure the Jenkins username/password credential with ID
+`eacef078-cc1c-4734-a1f2-fb4665f0236f`, using the dedicated deployment user's
+AWS access key as the username and secret key as the password. The policy in
+[`infra/jenkins-deploy-policy.json`](./infra/jenkins-deploy-policy.json) scopes
+deployment to the two Elastic Beanstalk applications/environments and their
+artifact prefix. Keep the keys in Jenkins Credentials, never in the
+repository, Jenkinsfile, or build log. Never use root-user access keys for
+Jenkins.
 
-For Jenkins running in a local Ubuntu VM on Windows, configure the job's
-**Poll SCM** trigger (for example, `H/5 * * * *`) so it can discover changes
-from GitHub without requiring GitHub to reach your local machine. Keep the VM
-running for polling and builds to occur. The AWS credential is required because
-a local VM does not inherit an EC2 instance role.
+For Jenkins running in a local Ubuntu VM on Windows, SCM polling lets it
+discover GitHub changes without requiring GitHub to reach your local machine.
+The AWS credential is required because a local VM does not inherit an EC2
+instance role.
 
 The deploy stage runs only after all preceding stages succeed and only for the
 `main` branch. It updates `library-booking-api` first and
@@ -83,30 +87,68 @@ environments use the Docker platform before enabling automatic deployment.
 
 ## AWS Elastic Beanstalk deployment
 
-The AWS CLI deployment uses the Sydney region (`ap-southeast-2`), a private
+The AWS deployment uses the Sydney region (`ap-southeast-2`), a non-public
 RDS MySQL instance, and separate single-instance Docker environments for the
 API and Angular site. The API and frontend environments use `t3.micro` EC2
 instances. A single-instance environment avoids a load balancer, but still
-incurs EC2, storage, RDS, and data-transfer charges.
+incurs EC2, storage, RDS, and data-transfer charges. The database is in the
+default VPC subnets with `PubliclyAccessible` disabled; its security group
+allows MySQL only from the API instances. The API and web environments accept
+public HTTP traffic, so configure HTTPS before using real user data.
 
-Authenticate the CLI with the AWS console session and check the environment
-states with:
+Use a named AWS CLI profile for one-time account setup; do not overwrite the
+default profile or create root access keys. Use the account's console sign-in
+to authenticate the profile:
 
 ```powershell
-aws login --region ap-southeast-2
-aws sts get-caller-identity --region ap-southeast-2
+aws login --profile library-booking-bootstrap --region ap-southeast-2
+aws sts get-caller-identity --profile library-booking-bootstrap --region ap-southeast-2
 aws elasticbeanstalk describe-environments `
   --environment-names library-booking-api library-booking-web `
+  --profile library-booking-bootstrap `
   --region ap-southeast-2 `
   --query "Environments[].{Name:EnvironmentName,Status:Status,Health:Health,URL:CNAME}" `
   --output table
 ```
 
-RDS remains private. Its security group should permit MySQL port 3306 only
-from the API environment's EC2 security group. Do not add a public CIDR rule
-for the database. The deployment's EC2 roles are separate: only the API role
-can read the two secure SSM parameters used for `SPRING_DATASOURCE_PASSWORD`
-and `JWT_SECRET`.
+The stack creates the resources in
+[`infra/aws-library-booking.yaml`](./infra/aws-library-booking.yaml). It
+expects the database password and JWT signing key to exist as encrypted SSM
+Standard `SecureString` parameters named
+`/library-booking/database-password` and `/library-booking/jwt-secret`.
+Provide the database password as the stack's protected `DatabasePassword`
+parameter as well. Do not put either value in a command-line argument, source
+file, or build log; use temporary local files and remove them after stack
+creation. The API environment uses `SPRING_PROFILES_ACTIVE=aws` and resolves
+the two parameters through Elastic Beanstalk's environment-secrets feature.
+Only the API instance role can read them; the web role cannot.
+
+The database username is `libraryapp`; the backend Liquibase migrations
+initialize the schema on startup. The web environment's `BACKEND_URL` points
+to the API environment, and Nginx forwards same-origin `/backend/` requests.
+Deleting the CloudFormation stack creates a final database snapshot; delete
+that snapshot separately when it is no longer needed to avoid ongoing snapshot
+storage charges.
+
+The Jenkins deployment identity is the dedicated IAM user
+`library-booking-jenkins-deploy`. On a new account, create the user and attach
+the deployment policy:
+
+```powershell
+$policyFile = (Resolve-Path '.\infra\jenkins-deploy-policy.json').Path
+aws iam create-user --profile library-booking-bootstrap --user-name library-booking-jenkins-deploy
+aws iam put-user-policy `
+  --profile library-booking-bootstrap `
+  --user-name library-booking-jenkins-deploy `
+  --policy-name LibraryBookingDeployment `
+  --policy-document "file://$policyFile"
+```
+
+The access key is stored in the existing Jenkins credential. AWS displays a
+new secret access key only once; do not paste it into chat or save it in the
+repository. For rotation, update Jenkins with the new key before deactivating
+the old one. The bootstrap profile is for one-time setup only; Jenkins uses
+the dedicated IAM user.
 
 The Elastic Beanstalk URLs use HTTP in this temporary demo configuration.
 Do not enter real or reused passwords, or use real user data, until HTTPS has

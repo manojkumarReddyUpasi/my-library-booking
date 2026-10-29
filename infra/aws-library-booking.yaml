@@ -1,0 +1,318 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: AWS infrastructure for the library booking API and web application.
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  ApiSubnetId:
+    Type: AWS::EC2::Subnet::Id
+  WebSubnetId:
+    Type: AWS::EC2::Subnet::Id
+  DatabaseSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+  ApiCnamePrefix:
+    Type: String
+    MinLength: 4
+    MaxLength: 63
+  WebCnamePrefix:
+    Type: String
+    MinLength: 4
+    MaxLength: 63
+  PlatformArn:
+    Type: String
+  DatabaseInstanceClass:
+    Type: String
+    Default: db.t3.micro
+    AllowedValues:
+      - db.t3.micro
+  DatabasePassword:
+    Type: String
+    NoEcho: true
+    MinLength: 20
+    MaxLength: 41
+
+Resources:
+  ElasticBeanstalkServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: library-booking-eb-service-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - elasticbeanstalk.amazonaws.com
+                - managedupdates.elasticbeanstalk.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSElasticBeanstalkEnhancedHealth
+        - arn:aws:iam::aws:policy/AWSElasticBeanstalkManagedUpdatesCustomerRolePolicy
+      Tags:
+        - Key: Project
+          Value: library-booking
+
+  ApiInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: library-booking-api-instance-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSElasticBeanstalkWebTier
+      Policies:
+        - PolicyName: ReadLibraryBookingSecrets
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ssm:GetParameter
+                Resource:
+                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/library-booking/database-password
+                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/library-booking/jwt-secret
+      Tags:
+        - Key: Project
+          Value: library-booking
+
+  WebInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: library-booking-web-instance-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSElasticBeanstalkWebTier
+      Tags:
+        - Key: Project
+          Value: library-booking
+
+  ApiInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: library-booking-api-instance-profile
+      Roles:
+        - !Ref ApiInstanceRole
+
+  WebInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: library-booking-web-instance-profile
+      Roles:
+        - !Ref WebInstanceRole
+
+  ApiSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Public HTTP access to the library booking API.
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: library-booking-api
+        - Key: Project
+          Value: library-booking
+
+  WebSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Public HTTP access to the library booking web application.
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: library-booking-web
+        - Key: Project
+          Value: library-booking
+
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: MySQL access only from the library booking API instances.
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !Ref ApiSecurityGroup
+      Tags:
+        - Key: Name
+          Value: library-booking-database
+        - Key: Project
+          Value: library-booking
+
+  DatabaseSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for the non-public library booking database.
+      SubnetIds: !Ref DatabaseSubnetIds
+      Tags:
+        - Key: Project
+          Value: library-booking
+
+  Database:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      DBInstanceIdentifier: library-booking-db
+      Engine: mysql
+      EngineVersion: "8.0.46"
+      DBInstanceClass: !Ref DatabaseInstanceClass
+      AllocatedStorage: 20
+      StorageType: gp3
+      StorageEncrypted: true
+      DBName: library_booking
+      MasterUsername: libraryapp
+      MasterUserPassword: !Ref DatabasePassword
+      DBSubnetGroupName: !Ref DatabaseSubnetGroup
+      VPCSecurityGroups:
+        - !GetAtt DatabaseSecurityGroup.GroupId
+      PubliclyAccessible: false
+      MultiAZ: false
+      BackupRetentionPeriod: 1
+      AutoMinorVersionUpgrade: true
+      DeletionProtection: false
+      Tags:
+        - Key: Project
+          Value: library-booking
+
+  ApiApplication:
+    Type: AWS::ElasticBeanstalk::Application
+    Properties:
+      ApplicationName: library-booking-api
+      Description: Spring Boot API for the library booking application.
+
+  WebApplication:
+    Type: AWS::ElasticBeanstalk::Application
+    Properties:
+      ApplicationName: library-booking-web
+      Description: Angular web application for library booking.
+
+  ApiEnvironment:
+    Type: AWS::ElasticBeanstalk::Environment
+    DependsOn:
+      - Database
+    Properties:
+      ApplicationName: !Ref ApiApplication
+      EnvironmentName: library-booking-api
+      CNAMEPrefix: !Ref ApiCnamePrefix
+      PlatformArn: !Ref PlatformArn
+      Tier:
+        Name: WebServer
+        Type: Standard
+      OptionSettings:
+        - Namespace: aws:elasticbeanstalk:environment
+          OptionName: EnvironmentType
+          Value: SingleInstance
+        - Namespace: aws:elasticbeanstalk:environment
+          OptionName: ServiceRole
+          Value: !GetAtt ElasticBeanstalkServiceRole.Arn
+        - Namespace: aws:autoscaling:launchconfiguration
+          OptionName: IamInstanceProfile
+          Value: !Ref ApiInstanceProfile
+        - Namespace: aws:autoscaling:launchconfiguration
+          OptionName: InstanceType
+          Value: t3.micro
+        - Namespace: aws:autoscaling:launchconfiguration
+          OptionName: SecurityGroups
+          Value: !GetAtt ApiSecurityGroup.GroupId
+        - Namespace: aws:autoscaling:launchconfiguration
+          OptionName: DisableDefaultEC2SecurityGroup
+          Value: "true"
+        - Namespace: aws:ec2:vpc
+          OptionName: VPCId
+          Value: !Ref VpcId
+        - Namespace: aws:ec2:vpc
+          OptionName: Subnets
+          Value: !Ref ApiSubnetId
+        - Namespace: aws:ec2:vpc
+          OptionName: AssociatePublicIpAddress
+          Value: "true"
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: SPRING_PROFILES_ACTIVE
+          Value: aws
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: SPRING_DATASOURCE_URL
+          Value: !Sub "jdbc:mysql://${Database.Endpoint.Address}:3306/library_booking?useSSL=true&serverTimezone=UTC"
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: SPRING_DATASOURCE_USERNAME
+          Value: libraryapp
+        - Namespace: aws:elasticbeanstalk:application:environmentsecrets
+          OptionName: SPRING_DATASOURCE_PASSWORD
+          Value: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/library-booking/database-password
+        - Namespace: aws:elasticbeanstalk:application:environmentsecrets
+          OptionName: JWT_SECRET
+          Value: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/library-booking/jwt-secret
+
+  WebEnvironment:
+    Type: AWS::ElasticBeanstalk::Environment
+    DependsOn:
+      - ApiEnvironment
+    Properties:
+      ApplicationName: !Ref WebApplication
+      EnvironmentName: library-booking-web
+      CNAMEPrefix: !Ref WebCnamePrefix
+      PlatformArn: !Ref PlatformArn
+      Tier:
+        Name: WebServer
+        Type: Standard
+      OptionSettings:
+        - Namespace: aws:elasticbeanstalk:environment
+          OptionName: EnvironmentType
+          Value: SingleInstance
+        - Namespace: aws:elasticbeanstalk:environment
+          OptionName: ServiceRole
+          Value: !GetAtt ElasticBeanstalkServiceRole.Arn
+        - Namespace: aws:autoscaling:launchconfiguration
+          OptionName: IamInstanceProfile
+          Value: !Ref WebInstanceProfile
+        - Namespace: aws:autoscaling:launchconfiguration
+          OptionName: InstanceType
+          Value: t3.micro
+        - Namespace: aws:autoscaling:launchconfiguration
+          OptionName: SecurityGroups
+          Value: !GetAtt WebSecurityGroup.GroupId
+        - Namespace: aws:autoscaling:launchconfiguration
+          OptionName: DisableDefaultEC2SecurityGroup
+          Value: "true"
+        - Namespace: aws:ec2:vpc
+          OptionName: VPCId
+          Value: !Ref VpcId
+        - Namespace: aws:ec2:vpc
+          OptionName: Subnets
+          Value: !Ref WebSubnetId
+        - Namespace: aws:ec2:vpc
+          OptionName: AssociatePublicIpAddress
+          Value: "true"
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: BACKEND_URL
+          Value: !Sub http://${ApiCnamePrefix}.${AWS::Region}.elasticbeanstalk.com
+
+Outputs:
+  DatabaseEndpoint:
+    Description: Private RDS endpoint for the library booking API.
+    Value: !GetAtt Database.Endpoint.Address
+  ApiUrl:
+    Description: Public HTTP URL for the API environment.
+    Value: !Sub http://${ApiCnamePrefix}.${AWS::Region}.elasticbeanstalk.com
+  WebUrl:
+    Description: Public HTTP URL for the web environment.
+    Value: !Sub http://${WebCnamePrefix}.${AWS::Region}.elasticbeanstalk.com
