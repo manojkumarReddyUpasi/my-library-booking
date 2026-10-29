@@ -33,7 +33,10 @@
     {
       "Sid": "ReadElasticBeanstalkStackTemplates",
       "Effect": "Allow",
-      "Action": "cloudformation:GetTemplate",
+      "Action": [
+        "cloudformation:DescribeStackResource",
+        "cloudformation:GetTemplate"
+      ],
       "Resource": [
         "arn:aws:cloudformation:ap-southeast-2:730279464171:stack/awseb-e-iazkhqsszf-stack/*",
         "arn:aws:cloudformation:ap-southeast-2:730279464171:stack/awseb-e-pjphq3puin-stack/*"
@@ -54,6 +57,7 @@
       "Action": [
         "s3:AbortMultipartUpload",
         "s3:GetObject",
+        "s3:GetObjectAcl",
         "s3:PutObject"
       ],
       "Resource": "arn:aws:s3:::elasticbeanstalk-ap-southeast-2-730279464171/library-booking/*"
