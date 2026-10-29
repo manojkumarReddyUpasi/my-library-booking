@@ -31,6 +31,15 @@
       "Resource": "*"
     },
     {
+      "Sid": "ReadElasticBeanstalkStackTemplates",
+      "Effect": "Allow",
+      "Action": "cloudformation:GetTemplate",
+      "Resource": [
+        "arn:aws:cloudformation:ap-southeast-2:730279464171:stack/awseb-e-iazkhqsszf-stack/*",
+        "arn:aws:cloudformation:ap-southeast-2:730279464171:stack/awseb-e-pjphq3puin-stack/*"
+      ]
+    },
+    {
       "Sid": "UploadDeploymentBundles",
       "Effect": "Allow",
       "Action": [
