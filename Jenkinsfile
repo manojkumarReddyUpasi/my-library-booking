@@ -22,7 +22,11 @@ pipeline {
         stage('Checkout frontend') {
             steps {
                 retry(3) {
-                    checkout scm
+                    script {
+                        def checkoutVars = checkout scm
+                        env.SCM_BRANCH = checkoutVars.GIT_BRANCH ?: ''
+                        echo "Frontend SCM branch: ${env.SCM_BRANCH}"
+                    }
                 }
             }
         }
@@ -304,7 +308,7 @@ pipeline {
         stage('Deploy to AWS') {
             when {
                 expression {
-                    def branch = env.BRANCH_NAME ?: env.GIT_BRANCH ?: ''
+                    def branch = env.SCM_BRANCH ?: env.BRANCH_NAME ?: env.GIT_BRANCH ?: ''
                     branch = branch.replaceFirst('^refs/remotes/', '').replaceFirst('^refs/heads/', '')
                     branch == 'main' || branch == 'origin/main'
                 }
