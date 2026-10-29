@@ -41,10 +41,14 @@ Spring app separately on port 8081.
 ## Jenkins continuous integration
 
 The `Jenkinsfile` checks out both repositories, builds Angular, runs the Spring
-Boot tests against a temporary MySQL container, builds both Docker images, and
-deploys successful builds from `main` to the Elastic Beanstalk API and web
-environments. Deployment uses the repositories' Dockerfiles as Elastic
-Beanstalk source bundles; it does not push images to a container registry.
+Boot tests against a temporary MySQL container, and builds both Docker images.
+After successful image builds, it runs the images locally on the Jenkins WSL
+worker at `http://localhost:4200`, with the API at `http://localhost:8081`.
+Those containers stay up after the build and are replaced by the next
+successful build. Their MySQL data is kept in a Docker volume. Successful
+builds from `main` also deploy to the Elastic Beanstalk API and web environments.
+AWS deployment uses the repositories' Dockerfiles as Elastic Beanstalk source
+bundles; it does not push images to a container registry.
 
 Use a Linux Jenkins agent with Git, Node.js 22, Java 17, Docker Engine access,
 the AWS CLI v2, and OpenSSL installed. The agent user must be allowed to access
@@ -115,7 +119,21 @@ configuration is not needed for the deployed frontend.
 
 After configuring Jenkins credentials and polling as described above, use
 **Build Now** once to verify checkout, frontend build, backend tests, and Docker
-image builds before relying on automatic polling. A successful `main` build
-then deploys the API and web source bundles in order. Check the build's
+image builds before relying on automatic polling. A successful image build
+starts or updates the local app at `http://localhost:4200`; the Jenkins worker
+must remain online for builds and local hosting to work. A successful `main`
+build then deploys the API and web source bundles in order. Check the build's
 **Console Output** for each environment's final `Ready` / `Green` status.
+
+To stop the local test app from Ubuntu WSL, remove its named containers and
+network:
+
+```bash
+docker rm -f library-booking-local-web library-booking-local-api library-booking-local-db
+docker network rm library-booking-local
+```
+
+The database volume remains so its data survives a later restart. To also
+permanently delete that local test data, run
+`docker volume rm library-booking-local-db-data`.
 Never add AWS keys or database credentials to this repository.

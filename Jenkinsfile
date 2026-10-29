@@ -119,6 +119,140 @@ pipeline {
             }
         }
 
+        stage('Run locally') {
+            steps {
+                sh '''
+                    set -eu
+                    NETWORK=library-booking-local
+                    DB_CONTAINER=library-booking-local-db
+                    API_CONTAINER=library-booking-local-api
+                    WEB_CONTAINER=library-booking-local-web
+                    CONFIG_DIR="$HOME/.config/my-library-booking-local"
+                    ENV_FILE="$CONFIG_DIR/backend.env"
+
+                    mkdir -p "$CONFIG_DIR"
+                    chmod 700 "$CONFIG_DIR"
+                    if [ ! -s "$ENV_FILE" ]; then
+                      umask 077
+                      printf 'MYSQL_ROOT_PASSWORD=%s\\nJWT_SECRET=%s\\n' \
+                        "$(openssl rand -hex 32)" "$(openssl rand -base64 48)" > "$ENV_FILE"
+                    fi
+                    chmod 600 "$ENV_FILE"
+
+                    if ! docker network inspect "$NETWORK" >/dev/null 2>&1; then
+                      docker network create "$NETWORK" >/dev/null
+                    fi
+
+                    if ! docker container inspect "$DB_CONTAINER" >/dev/null 2>&1; then
+                      docker volume create library-booking-local-db-data >/dev/null
+                      docker run --detach \
+                        --name "$DB_CONTAINER" \
+                        --restart unless-stopped \
+                        --network "$NETWORK" \
+                        --network-alias database \
+                        --mount source=library-booking-local-db-data,target=/var/lib/mysql \
+                        --env-file "$ENV_FILE" \
+                        --env MYSQL_DATABASE=library_booking \
+                        mysql:8.4
+                    else
+                      docker start "$DB_CONTAINER" >/dev/null
+                    fi
+
+                    READY=0
+                    for attempt in $(seq 1 60); do
+                      if docker exec "$DB_CONTAINER" sh -c \
+                        'mysqladmin ping --host=127.0.0.1 --user=root --password="$MYSQL_ROOT_PASSWORD" --silent' \
+                        >/dev/null 2>&1; then
+                        READY=1
+                        break
+                      fi
+                      sleep 2
+                    done
+                    if [ "$READY" -ne 1 ]; then
+                      docker logs "$DB_CONTAINER"
+                      echo "Local MySQL did not become ready."
+                      exit 1
+                    fi
+
+                    for port in 4200 8081; do
+                      for container in $(docker ps --quiet --filter "publish=$port"); do
+                        image="$(docker inspect --format '{{.Config.Image}}' "$container")"
+                        case "$port:$image" in
+                          4200:library-booking-frontend:*)
+                            docker rm --force "$container" >/dev/null
+                            ;;
+                          8081:library-booking-backend:*)
+                            docker rm --force "$container" >/dev/null
+                            ;;
+                        esac
+                      done
+                    done
+
+                    docker rm --force "$WEB_CONTAINER" "$API_CONTAINER" >/dev/null 2>&1 || true
+                    docker run --detach \
+                      --name "$API_CONTAINER" \
+                      --restart unless-stopped \
+                      --network "$NETWORK" \
+                      --network-alias backend \
+                      --publish 127.0.0.1:8081:8081 \
+                      --env-file "$ENV_FILE" \
+                      --env SPRING_DATASOURCE_URL='jdbc:mysql://database:3306/library_booking?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC' \
+                      --env SPRING_DATASOURCE_USERNAME=root \
+                      "library-booking-backend:${BUILD_NUMBER}" >/dev/null
+
+                    if ! docker run --detach \
+                      --name "$WEB_CONTAINER" \
+                      --restart unless-stopped \
+                      --network "$NETWORK" \
+                      --publish 127.0.0.1:4200:8080 \
+                      --env BACKEND_URL=http://backend:8081 \
+                      "library-booking-frontend:${BUILD_NUMBER}" >/dev/null; then
+                      docker rm --force "$API_CONTAINER" >/dev/null 2>&1 || true
+                      exit 1
+                    fi
+
+                    API_READY=0
+                    for attempt in $(seq 1 60); do
+                      API_STATUS="$(curl --connect-timeout 2 --max-time 5 \
+                        --silent --output /dev/null --write-out '%{http_code}' \
+                        http://127.0.0.1:8081/ || true)"
+                      case "$API_STATUS" in
+                        2??|3??|4??) API_READY=1; break ;;
+                      esac
+                      sleep 2
+                    done
+                    if [ "$API_READY" -ne 1 ]; then
+                      docker logs "$API_CONTAINER"
+                      docker rm --force "$WEB_CONTAINER" "$API_CONTAINER" >/dev/null 2>&1 || true
+                      echo "Local backend did not become ready."
+                      exit 1
+                    fi
+
+                    WEB_READY=0
+                    for attempt in $(seq 1 30); do
+                      WEB_STATUS="$(curl --connect-timeout 2 --max-time 5 \
+                        --silent --output /dev/null --write-out '%{http_code}' \
+                        http://127.0.0.1:4200/ || true)"
+                      if [ "$WEB_STATUS" = 200 ]; then
+                        WEB_READY=1
+                        break
+                      fi
+                      sleep 2
+                    done
+                    if [ "$WEB_READY" -ne 1 ]; then
+                      docker logs "$WEB_CONTAINER"
+                      docker rm --force "$WEB_CONTAINER" "$API_CONTAINER" >/dev/null 2>&1 || true
+                      echo "Local frontend did not return HTTP 200."
+                      exit 1
+                    fi
+
+                    echo "Build ${BUILD_NUMBER} is running locally at http://localhost:4200"
+                    echo "Backend: http://localhost:8081 (HTTP ${API_STATUS})"
+                    echo "Containers remain running after this Jenkins build and are replaced by the next successful build."
+                '''
+            }
+        }
+
         stage('Deploy to AWS') {
             when {
                 expression {
