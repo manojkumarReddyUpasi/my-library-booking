@@ -305,6 +305,7 @@ pipeline {
             when {
                 expression {
                     def branch = env.BRANCH_NAME ?: env.GIT_BRANCH ?: ''
+                    branch = branch.replaceFirst('^refs/remotes/', '').replaceFirst('^refs/heads/', '')
                     branch == 'main' || branch == 'origin/main'
                 }
             }
