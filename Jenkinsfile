@@ -400,8 +400,12 @@ pipeline {
                             --region "$AWS_REGION" \
                             --environment-names "$environment_name" \
                             --query 'Environments[0].Health' --output text)"
-                          if [ "$final_status" != "Ready" ] || [ "$final_health" != "Green" ]; then
-                            echo "Deployment to $environment_name finished with status=$final_status health=$final_health."
+                          final_version="$(aws elasticbeanstalk describe-environments \
+                            --region "$AWS_REGION" \
+                            --environment-names "$environment_name" \
+                            --query 'Environments[0].VersionLabel' --output text)"
+                          if [ "$final_status" != "Ready" ] || [ "$final_health" != "Green" ] || [ "$final_version" != "$VERSION_LABEL" ]; then
+                            echo "Deployment to $environment_name finished with status=$final_status health=$final_health version=$final_version."
                             aws elasticbeanstalk describe-events \
                               --region "$AWS_REGION" \
                               --environment-name "$environment_name" \
