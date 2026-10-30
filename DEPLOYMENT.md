@@ -73,6 +73,11 @@ by Elastic Beanstalk deployments. Keep the keys in Jenkins Credentials, never
 in the repository, Jenkinsfile, or build log. Never use root-user access keys
 for Jenkins.
 
+The Elastic Beanstalk source bucket must also allow `s3:GetObject` and
+`s3:GetObjectAcl` for the Jenkins deployment user and the Elastic Beanstalk
+service role on `resources/environments/*`. Elastic Beanstalk creates runtime
+extension objects under that prefix during environment updates.
+
 For Jenkins running in a local Ubuntu VM on Windows, SCM polling lets it
 discover GitHub changes without requiring GitHub to reach your local machine.
 The AWS credential is required because a local VM does not inherit an EC2
@@ -81,8 +86,8 @@ instance role.
 The deploy stage runs only after all preceding stages succeed and only for the
 `main` branch. It updates `library-booking-api` first and
 `library-booking-web` second in `ap-southeast-2`; each deployment must return
-Elastic Beanstalk status `Ready` and health `Green` for the Jenkins build to
-pass. In the Elastic Beanstalk console, the previous application version can
+Elastic Beanstalk status `Ready`, health `Green`, and the exact new version
+label for the Jenkins build to pass. In the Elastic Beanstalk console, the previous application version can
 be selected to roll back a deployment. Confirm that the Jenkins AWS principal
 can upload to the region's Elastic Beanstalk source bucket and that both
 environments use the Docker platform before enabling automatic deployment.
