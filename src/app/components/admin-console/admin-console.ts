@@ -72,11 +72,14 @@ export class AdminConsoleComponent {
   }
 
   protected get reservationStatusSlices(): PieSlice[] {
-    const returned = this.reservations.filter((reservation) => reservation.status === 'Returned').length;
+    const returned = this.reservations.filter(
+      (reservation) => reservation.status === 'Returned',
+    ).length;
     return this.toPieSlices([
       { label: 'Returned', count: returned, color: '#58798a' },
       { label: 'Not returned', count: this.reservations.length - returned, color: '#c3974b' },
     ]);
+    //
   }
 
   protected pieBackground(slices: PieSlice[]): string {
@@ -92,9 +95,7 @@ export class AdminConsoleComponent {
     return `conic-gradient(${stops.join(', ')})`;
   }
 
-  private toPieSlices(
-    slices: Array<{ label: string; count: number; color: string }>,
-  ): PieSlice[] {
+  private toPieSlices(slices: Array<{ label: string; count: number; color: string }>): PieSlice[] {
     const total = slices.reduce((sum, slice) => sum + slice.count, 0);
     return slices.map((slice) => ({
       ...slice,
@@ -121,5 +122,7 @@ export class AdminConsoleComponent {
     this.query.set((event.target as HTMLInputElement).value);
   }
 
-  protected toggleAvailability(book: Book) { this.availabilityChange.emit(book); }
+  protected toggleAvailability(book: Book) {
+    this.availabilityChange.emit(book);
+  }
 }
