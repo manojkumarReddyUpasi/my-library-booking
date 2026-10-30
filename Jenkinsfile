@@ -371,6 +371,7 @@ pipeline {
                           aws elasticbeanstalk update-environment \
                             --region "$AWS_REGION" \
                             --environment-name "$environment_name" \
+                            --option-settings "Namespace=aws:elasticbeanstalk:environment:process:default,OptionName=HealthCheckPath,Value=$([ "$environment_name" = "$EB_API_ENVIRONMENT" ] && printf '/health' || printf '/')" \
                             --version-label "$VERSION_LABEL"
                           aws elasticbeanstalk wait environment-updated \
                             --region "$AWS_REGION" \
@@ -386,6 +387,12 @@ pipeline {
                             --query 'Environments[0].Health' --output text)"
                           if [ "$final_status" != "Ready" ] || [ "$final_health" != "Green" ]; then
                             echo "Deployment to $environment_name finished with status=$final_status health=$final_health."
+                            aws elasticbeanstalk describe-events \
+                              --region "$AWS_REGION" \
+                              --environment-name "$environment_name" \
+                              --max-items 10 \
+                              --query 'Events[].{Time:EventDate,Severity:Severity,Message:Message}' \
+                              --output table || true
                             exit 1
                           fi
                           echo "Deployed $VERSION_LABEL to $environment_name (health: $final_health)."

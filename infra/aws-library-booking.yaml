@@ -222,6 +222,9 @@ Resources:
         - Namespace: aws:elasticbeanstalk:environment
           OptionName: EnvironmentType
           Value: SingleInstance
+        - Namespace: aws:elasticbeanstalk:environment:process:default
+          OptionName: HealthCheckPath
+          Value: /health
         - Namespace: aws:elasticbeanstalk:environment
           OptionName: ServiceRole
           Value: !GetAtt ElasticBeanstalkServiceRole.Arn
