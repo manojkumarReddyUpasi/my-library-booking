@@ -57,7 +57,9 @@ Resources:
                 Action:
                   - s3:GetObject
                   - s3:GetObjectAcl
-                Resource: !Sub arn:${AWS::Partition}:s3:::elasticbeanstalk-${AWS::Region}-${AWS::AccountId}/library-booking/*
+                Resource:
+                  - !Sub arn:${AWS::Partition}:s3:::elasticbeanstalk-${AWS::Region}-${AWS::AccountId}/library-booking/*
+                  - !Sub arn:${AWS::Partition}:s3:::elasticbeanstalk-${AWS::Region}-${AWS::AccountId}/resources/environments/*
       Tags:
         - Key: Project
           Value: library-booking
