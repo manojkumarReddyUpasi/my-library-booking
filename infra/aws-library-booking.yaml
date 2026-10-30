@@ -48,6 +48,16 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSElasticBeanstalkEnhancedHealth
         - arn:aws:iam::aws:policy/AWSElasticBeanstalkManagedUpdatesCustomerRolePolicy
+      Policies:
+        - PolicyName: ReadDeploymentBundleMetadata
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectAcl
+                Resource: !Sub arn:${AWS::Partition}:s3:::elasticbeanstalk-${AWS::Region}-${AWS::AccountId}/library-booking/*
       Tags:
         - Key: Project
           Value: library-booking
