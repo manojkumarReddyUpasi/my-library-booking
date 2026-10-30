@@ -338,10 +338,8 @@ pipeline {
                           'COPY dist/my-library-booking/browser /usr/share/nginx/html' \
                           'EXPOSE 8080' \
                           > "$FRONTEND_BUNDLE_DIR/Dockerfile"
-                        (
-                          cd "$FRONTEND_BUNDLE_DIR"
-                          zip -qr "../frontend.zip" .
-                        )
+                        jar --create --file="$BUNDLE_DIR/frontend.zip" \
+                          -C "$FRONTEND_BUNDLE_DIR" .
                         git -C backend archive --format=zip \
                           --output="../$BUNDLE_DIR/backend.zip" HEAD
 
