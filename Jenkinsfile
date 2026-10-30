@@ -326,7 +326,8 @@ pipeline {
                         mkdir -p "$BUNDLE_DIR"
 
                         git archive --format=zip \
-                          --output="$BUNDLE_DIR/frontend.zip" HEAD
+                          --output="$BUNDLE_DIR/frontend.zip" HEAD \
+                          ':(exclude)docker-compose.yml'
                         git -C backend archive --format=zip \
                           --output="../$BUNDLE_DIR/backend.zip" HEAD
 
@@ -361,7 +362,9 @@ pipeline {
 
                           object_key="library-booking/$environment_name/$VERSION_LABEL.zip"
                           aws s3 cp "$artifact" "s3://$BUCKET/$object_key" \
-                            --region "$AWS_REGION" --only-show-errors
+                            --region "$AWS_REGION" \
+                            --acl bucket-owner-full-control \
+                            --only-show-errors
                           aws elasticbeanstalk create-application-version \
                             --region "$AWS_REGION" \
                             --application-name "$application_name" \
