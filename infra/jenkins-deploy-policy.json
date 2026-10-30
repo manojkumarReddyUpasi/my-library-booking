@@ -29,7 +29,8 @@
         "elasticbeanstalk:CreateStorageLocation",
         "autoscaling:DescribeAutoScalingGroups",
         "ec2:DescribeSubnets",
-        "ec2:DescribeSecurityGroups"
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeImages"
       ],
       "Resource": "*"
     },
