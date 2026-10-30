@@ -85,6 +85,15 @@ Resources:
                 Resource:
                   - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/library-booking/database-password
                   - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/library-booking/jwt-secret
+        - PolicyName: ReadDeploymentBundleMetadata
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectAcl
+                Resource: !Sub arn:${AWS::Partition}:s3:::elasticbeanstalk-${AWS::Region}-${AWS::AccountId}/library-booking/*
       Tags:
         - Key: Project
           Value: library-booking
@@ -102,6 +111,16 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AWSElasticBeanstalkWebTier
+      Policies:
+        - PolicyName: ReadDeploymentBundleMetadata
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectAcl
+                Resource: !Sub arn:${AWS::Partition}:s3:::elasticbeanstalk-${AWS::Region}-${AWS::AccountId}/library-booking/*
       Tags:
         - Key: Project
           Value: library-booking
