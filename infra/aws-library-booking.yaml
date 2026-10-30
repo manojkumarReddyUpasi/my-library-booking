@@ -261,6 +261,9 @@ Resources:
           OptionName: IamInstanceProfile
           Value: !Ref ApiInstanceProfile
         - Namespace: aws:autoscaling:launchconfiguration
+          OptionName: LaunchTemplateTagPropagationEnabled
+          Value: "true"
+        - Namespace: aws:autoscaling:launchconfiguration
           OptionName: InstanceType
           Value: t3.micro
         - Namespace: aws:autoscaling:launchconfiguration
@@ -316,6 +319,9 @@ Resources:
         - Namespace: aws:autoscaling:launchconfiguration
           OptionName: IamInstanceProfile
           Value: !Ref WebInstanceProfile
+        - Namespace: aws:autoscaling:launchconfiguration
+          OptionName: LaunchTemplateTagPropagationEnabled
+          Value: "true"
         - Namespace: aws:autoscaling:launchconfiguration
           OptionName: InstanceType
           Value: t3.micro

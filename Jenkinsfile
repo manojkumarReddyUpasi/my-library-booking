@@ -325,9 +325,23 @@ pipeline {
                         BUNDLE_DIR="deploy-bundles"
                         mkdir -p "$BUNDLE_DIR"
 
-                        git archive --format=zip \
-                          --output="$BUNDLE_DIR/frontend.zip" HEAD \
-                          ':(exclude)docker-compose.yml'
+                        FRONTEND_BUNDLE_DIR="$BUNDLE_DIR/frontend"
+                        mkdir -p "$FRONTEND_BUNDLE_DIR"
+                        git archive --format=tar HEAD \
+                          ':(exclude)docker-compose.yml' | tar -xf - -C "$FRONTEND_BUNDLE_DIR"
+                        mkdir -p "$FRONTEND_BUNDLE_DIR/dist/my-library-booking"
+                        cp -R dist/my-library-booking/browser \
+                          "$FRONTEND_BUNDLE_DIR/dist/my-library-booking/browser"
+                        printf '%s\n' \
+                          'FROM nginx:stable-alpine' \
+                          'COPY docker/default.conf.template /etc/nginx/templates/default.conf.template' \
+                          'COPY dist/my-library-booking/browser /usr/share/nginx/html' \
+                          'EXPOSE 8080' \
+                          > "$FRONTEND_BUNDLE_DIR/Dockerfile"
+                        (
+                          cd "$FRONTEND_BUNDLE_DIR"
+                          zip -qr "../frontend.zip" .
+                        )
                         git -C backend archive --format=zip \
                           --output="../$BUNDLE_DIR/backend.zip" HEAD
 
