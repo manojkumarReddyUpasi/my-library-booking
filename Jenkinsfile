@@ -424,23 +424,27 @@ pipeline {
                               echo "Elastic Beanstalk update did not complete on attempt $attempt."
                               continue
                             fi
-                            final_status="$(aws elasticbeanstalk describe-environments \
-                              --region "$AWS_REGION" \
-                              --environment-names "$environment_name" \
-                              --query 'Environments[0].Status' --output text)"
-                            final_health="$(aws elasticbeanstalk describe-environments \
-                              --region "$AWS_REGION" \
-                              --environment-names "$environment_name" \
-                              --query 'Environments[0].Health' --output text)"
-                            final_version="$(aws elasticbeanstalk describe-environments \
-                              --region "$AWS_REGION" \
-                              --environment-names "$environment_name" \
-                              --query 'Environments[0].VersionLabel' --output text)"
-                            if [ "$final_status" = "Ready" ] && [ "$final_health" = "Green" ] && [ "$final_version" = "$VERSION_LABEL" ]; then
-                              deployment_succeeded=true
-                              break
-                            fi
-                            echo "Attempt $attempt finished with status=$final_status health=$final_health version=$final_version."
+                            for poll in $(seq 1 40); do
+                              final_status="$(aws elasticbeanstalk describe-environments \
+                                --region "$AWS_REGION" \
+                                --environment-names "$environment_name" \
+                                --query 'Environments[0].Status' --output text)"
+                              final_health="$(aws elasticbeanstalk describe-environments \
+                                --region "$AWS_REGION" \
+                                --environment-names "$environment_name" \
+                                --query 'Environments[0].Health' --output text)"
+                              final_version="$(aws elasticbeanstalk describe-environments \
+                                --region "$AWS_REGION" \
+                                --environment-names "$environment_name" \
+                                --query 'Environments[0].VersionLabel' --output text)"
+                              if [ "$final_status" = "Ready" ] && [ "$final_health" = "Green" ] && [ "$final_version" = "$VERSION_LABEL" ]; then
+                                deployment_succeeded=true
+                                break 2
+                              fi
+                              echo "Waiting for $environment_name version=$VERSION_LABEL (status=$final_status health=$final_health actual=$final_version; poll $poll/40)."
+                              sleep 15
+                            done
+                            echo "Attempt $attempt did not reach the expected version."
                           done
                           if [ "$deployment_succeeded" != true ]; then
                             echo "Deployment to $environment_name finished with status=$final_status health=$final_health version=$final_version."
