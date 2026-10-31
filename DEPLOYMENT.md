@@ -73,10 +73,11 @@ by Elastic Beanstalk deployments. Keep the keys in Jenkins Credentials, never
 in the repository, Jenkinsfile, or build log. Never use root-user access keys
 for Jenkins.
 
-The Elastic Beanstalk source bucket must also allow `s3:GetObject` and
-`s3:GetObjectAcl` for the Jenkins deployment user and the Elastic Beanstalk
-service role on `resources/environments/*`. Elastic Beanstalk creates runtime
-extension objects under that prefix during environment updates.
+The Elastic Beanstalk source bucket must allow `s3:GetObject` and
+`s3:GetObjectAcl` for Elastic Beanstalk on all objects in the bucket.
+Elastic Beanstalk checks both the uploaded application bundle and generated
+runtime extension objects during environment updates; the latter are not
+always limited to the application bundle prefixes.
 
 Jenkins sets `bucket-owner-full-control` both during upload and with a
 follow-up `s3api put-object-acl`, then verifies the resulting
@@ -87,10 +88,11 @@ while S3 ACL metadata propagates.
 Keep these bucket-policy principals in separate statements. Use one statement
 for `arn:aws:iam::<account-id>:role/library-booking-eb-service-role`, one for
 `arn:aws:iam::<account-id>:user/library-booking-jenkins-deploy`, and one for
-the `elasticbeanstalk.amazonaws.com` service principal. Each statement should
-allow `s3:GetObject` and `s3:GetObjectAcl` on
-`arn:aws:s3:::<source-bucket>/resources/environments/*`. Combining AWS role
-and service principals in a single statement can still result in
+the `elasticbeanstalk.amazonaws.com` service principal. The Elastic Beanstalk
+statement must allow `s3:GetObject` and `s3:GetObjectAcl` on
+`arn:aws:s3:::<source-bucket>/*`; limiting it to
+`resources/environments/*` can still cause deployment failures. Combining AWS
+role and service principals in a single statement can also result in
 `s3:GetObjectAcl` denial during an environment update.
 
 For Jenkins running in a local Ubuntu VM on Windows, SCM polling lets it
