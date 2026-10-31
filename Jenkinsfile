@@ -403,23 +403,8 @@ pipeline {
                             --version-label "$VERSION_LABEL" \
                             --source-bundle "S3Bucket=$BUCKET,S3Key=$object_key" \
                             --description "Jenkins build $BUILD_NUMBER"
-                          version_status=""
-                          for version_poll in $(seq 1 40); do
-                            version_status="$(aws elasticbeanstalk describe-application-versions \
-                              --region "$AWS_REGION" \
-                              --application-name "$application_name" \
-                              --version-labels "$VERSION_LABEL" \
-                              --query 'ApplicationVersions[0].Status' --output text)"
-                            if [ "$version_status" = "PROCESSED" ]; then
-                              break
-                            fi
-                            if [ "$version_status" = "FAILED" ] || [ "$version_poll" -eq 40 ]; then
-                              echo "Elastic Beanstalk application version $VERSION_LABEL was not processed (status: $version_status)."
-                              exit 1
-                            fi
-                            echo "Waiting for Elastic Beanstalk application version $VERSION_LABEL (status: $version_status; poll $version_poll/40)."
-                            sleep 15
-                          done
+                          echo "Allowing Elastic Beanstalk to register application version $VERSION_LABEL before deployment."
+                          sleep 30
                           health_check_path="$([ "$environment_name" = "$EB_API_ENVIRONMENT" ] && printf '/health' || printf '/')"
                           deployment_succeeded=false
                           for attempt in 1 2 3; do
