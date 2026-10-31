@@ -383,28 +383,46 @@ pipeline {
                             --version-label "$VERSION_LABEL" \
                             --source-bundle "S3Bucket=$BUCKET,S3Key=$object_key" \
                             --description "Jenkins build $BUILD_NUMBER"
-                          aws elasticbeanstalk update-environment \
-                            --region "$AWS_REGION" \
-                            --environment-name "$environment_name" \
-                            --option-settings "Namespace=aws:elasticbeanstalk:environment:process:default,OptionName=HealthCheckPath,Value=$([ "$environment_name" = "$EB_API_ENVIRONMENT" ] && printf '/health' || printf '/')" \
-                            --version-label "$VERSION_LABEL"
-                          aws elasticbeanstalk wait environment-updated \
-                            --region "$AWS_REGION" \
-                            --environment-names "$environment_name"
-
-                          final_status="$(aws elasticbeanstalk describe-environments \
-                            --region "$AWS_REGION" \
-                            --environment-names "$environment_name" \
-                            --query 'Environments[0].Status' --output text)"
-                          final_health="$(aws elasticbeanstalk describe-environments \
-                            --region "$AWS_REGION" \
-                            --environment-names "$environment_name" \
-                            --query 'Environments[0].Health' --output text)"
-                          final_version="$(aws elasticbeanstalk describe-environments \
-                            --region "$AWS_REGION" \
-                            --environment-names "$environment_name" \
-                            --query 'Environments[0].VersionLabel' --output text)"
-                          if [ "$final_status" != "Ready" ] || [ "$final_health" != "Green" ] || [ "$final_version" != "$VERSION_LABEL" ]; then
+                          health_check_path="$([ "$environment_name" = "$EB_API_ENVIRONMENT" ] && printf '/health' || printf '/')"
+                          deployment_succeeded=false
+                          for attempt in 1 2 3; do
+                            if [ "$attempt" -gt 1 ]; then
+                              echo "Retrying Elastic Beanstalk deployment (attempt $attempt/3)."
+                              sleep 10
+                            fi
+                            if ! aws elasticbeanstalk update-environment \
+                              --region "$AWS_REGION" \
+                              --environment-name "$environment_name" \
+                              --option-settings "Namespace=aws:elasticbeanstalk:environment:process:default,OptionName=HealthCheckPath,Value=$health_check_path" \
+                              --version-label "$VERSION_LABEL"; then
+                              echo "Elastic Beanstalk update request failed on attempt $attempt."
+                              continue
+                            fi
+                            if ! aws elasticbeanstalk wait environment-updated \
+                              --region "$AWS_REGION" \
+                              --environment-names "$environment_name"; then
+                              echo "Elastic Beanstalk update did not complete on attempt $attempt."
+                              continue
+                            fi
+                            final_status="$(aws elasticbeanstalk describe-environments \
+                              --region "$AWS_REGION" \
+                              --environment-names "$environment_name" \
+                              --query 'Environments[0].Status' --output text)"
+                            final_health="$(aws elasticbeanstalk describe-environments \
+                              --region "$AWS_REGION" \
+                              --environment-names "$environment_name" \
+                              --query 'Environments[0].Health' --output text)"
+                            final_version="$(aws elasticbeanstalk describe-environments \
+                              --region "$AWS_REGION" \
+                              --environment-names "$environment_name" \
+                              --query 'Environments[0].VersionLabel' --output text)"
+                            if [ "$final_status" = "Ready" ] && [ "$final_health" = "Green" ] && [ "$final_version" = "$VERSION_LABEL" ]; then
+                              deployment_succeeded=true
+                              break
+                            fi
+                            echo "Attempt $attempt finished with status=$final_status health=$final_health version=$final_version."
+                          done
+                          if [ "$deployment_succeeded" != true ]; then
                             echo "Deployment to $environment_name finished with status=$final_status health=$final_health version=$final_version."
                             aws elasticbeanstalk describe-events \
                               --region "$AWS_REGION" \
