@@ -78,6 +78,12 @@ The Elastic Beanstalk source bucket must also allow `s3:GetObject` and
 service role on `resources/environments/*`. Elastic Beanstalk creates runtime
 extension objects under that prefix during environment updates.
 
+Jenkins sets `bucket-owner-full-control` both during upload and with a
+follow-up `s3api put-object-acl`, then verifies the resulting
+`FULL_CONTROL` grant before creating the Elastic Beanstalk application
+version. The explicit follow-up prevents intermittent deployment failures
+while S3 ACL metadata propagates.
+
 Keep these bucket-policy principals in separate statements. Use one statement
 for `arn:aws:iam::<account-id>:role/library-booking-eb-service-role`, one for
 `arn:aws:iam::<account-id>:user/library-booking-jenkins-deploy`, and one for

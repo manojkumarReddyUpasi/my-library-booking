@@ -377,6 +377,26 @@ pipeline {
                             --region "$AWS_REGION" \
                             --acl bucket-owner-full-control \
                             --only-show-errors
+                          aws s3api put-object-acl \
+                            --bucket "$BUCKET" \
+                            --key "$object_key" \
+                            --acl bucket-owner-full-control \
+                            --region "$AWS_REGION"
+                          for acl_attempt in 1 2 3 4 5; do
+                            acl_permissions="$(aws s3api get-object-acl \
+                              --bucket "$BUCKET" \
+                              --key "$object_key" \
+                              --region "$AWS_REGION" \
+                              --query 'Grants[].Permission' --output text)"
+                            if printf '%s' "$acl_permissions" | grep -qw FULL_CONTROL; then
+                              break
+                            fi
+                            if [ "$acl_attempt" -eq 5 ]; then
+                              echo "S3 ACL was not confirmed for $object_key."
+                              exit 1
+                            fi
+                            sleep 5
+                          done
                           aws elasticbeanstalk create-application-version \
                             --region "$AWS_REGION" \
                             --application-name "$application_name" \
