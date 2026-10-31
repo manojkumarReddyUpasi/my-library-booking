@@ -78,6 +78,15 @@ The Elastic Beanstalk source bucket must also allow `s3:GetObject` and
 service role on `resources/environments/*`. Elastic Beanstalk creates runtime
 extension objects under that prefix during environment updates.
 
+Keep these bucket-policy principals in separate statements. Use one statement
+for `arn:aws:iam::<account-id>:role/library-booking-eb-service-role`, one for
+`arn:aws:iam::<account-id>:user/library-booking-jenkins-deploy`, and one for
+the `elasticbeanstalk.amazonaws.com` service principal. Each statement should
+allow `s3:GetObject` and `s3:GetObjectAcl` on
+`arn:aws:s3:::<source-bucket>/resources/environments/*`. Combining AWS role
+and service principals in a single statement can still result in
+`s3:GetObjectAcl` denial during an environment update.
+
 For Jenkins running in a local Ubuntu VM on Windows, SCM polling lets it
 discover GitHub changes without requiring GitHub to reach your local machine.
 The AWS credential is required because a local VM does not inherit an EC2
