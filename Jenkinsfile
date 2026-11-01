@@ -314,12 +314,13 @@ pipeline {
                 }
             }
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'eacef078-cc1c-4734-a1f2-fb4665f0236f',
-                    usernameVariable: 'AWS_ACCESS_KEY_ID',
-                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
-                )]) {
-                    sh '''
+                retry(2) {
+                    withCredentials([usernamePassword(
+                        credentialsId: 'eacef078-cc1c-4734-a1f2-fb4665f0236f',
+                        usernameVariable: 'AWS_ACCESS_KEY_ID',
+                        passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                    )]) {
+                        sh '''
                         set -eu
                         VERSION_LABEL="${BUILD_NUMBER}-$(git rev-parse --short=7 HEAD)"
                         BUNDLE_DIR="deploy-bundles"
@@ -397,12 +398,21 @@ pipeline {
                             fi
                             sleep 5
                           done
-                          aws elasticbeanstalk create-application-version \
+                          if aws elasticbeanstalk describe-application-versions \
                             --region "$AWS_REGION" \
                             --application-name "$application_name" \
-                            --version-label "$VERSION_LABEL" \
-                            --source-bundle "S3Bucket=$BUCKET,S3Key=$object_key" \
-                            --description "Jenkins build $BUILD_NUMBER"
+                            --version-labels "$VERSION_LABEL" \
+                            --query 'ApplicationVersions[0].VersionLabel' \
+                            --output text | grep -qw "$VERSION_LABEL"; then
+                            echo "Elastic Beanstalk application version $VERSION_LABEL already exists; reusing it."
+                          else
+                            aws elasticbeanstalk create-application-version \
+                              --region "$AWS_REGION" \
+                              --application-name "$application_name" \
+                              --version-label "$VERSION_LABEL" \
+                              --source-bundle "S3Bucket=$BUCKET,S3Key=$object_key" \
+                              --description "Jenkins build $BUILD_NUMBER"
+                          fi
                           echo "Allowing Elastic Beanstalk to register application version $VERSION_LABEL before deployment."
                           sleep 30
                           health_check_path="$([ "$environment_name" = "$EB_API_ENVIRONMENT" ] && printf '/health' || printf '/')"
@@ -463,7 +473,8 @@ pipeline {
 
                         deploy_environment "$EB_WEB_ENVIRONMENT" "$BUNDLE_DIR/frontend.zip"
                         deploy_environment "$EB_API_ENVIRONMENT" "$BUNDLE_DIR/backend.zip"
-                    '''
+                        '''
+                    }
                 }
             }
         }
